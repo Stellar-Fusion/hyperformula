@@ -255,9 +255,9 @@ export class FormulaCellVertex extends FormulaVertex {
   public getCellValue(): InterpreterValue {
     if (this.cachedCellValue !== undefined) {
       return this.cachedCellValue
-    } 
-
-    return 0
+    }  else {
+      throw Error('Value of the formula cell is not computed.')
+    }
   }
 
   public isComputed() {
