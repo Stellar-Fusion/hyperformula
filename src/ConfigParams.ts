@@ -396,6 +396,12 @@ export interface ConfigParams {
    * @category String
    */
   useWildcards: boolean,
+  /**
+   * initialComputedValues - required for circular references - provides initial values for cells with formulas.
+   * @default {}
+   * @category Engine
+   */
+  initialComputedValues: {[sheet: string]: (string | number)[][]},
 }
 
 export type ConfigParamsList = keyof ConfigParams
