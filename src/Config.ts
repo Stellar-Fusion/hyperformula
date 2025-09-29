@@ -7,6 +7,7 @@ import {
   configCheckIfParametersNotInConflict,
   configValueFromParam,
   configValueFromParamCheck,
+  validateInitialComputedValues,
   validateNumberToBeAtLeast,
   validateNumberToBeAtMost
 } from './ArgumentSanitization'
@@ -255,7 +256,7 @@ export class Config implements ConfigParams, ParserConfig {
     this.undoLimit = configValueFromParam(undoLimit, 'number', 'undoLimit')
     this.useRegularExpressions = configValueFromParam(useRegularExpressions, 'boolean', 'useRegularExpressions')
     this.useWildcards = configValueFromParam(useWildcards, 'boolean', 'useWildcards')
-    this.initialComputedValues = initialComputedValues ?? Config.defaultConfig.initialComputedValues
+    this.initialComputedValues = validateInitialComputedValues(options, 'initialComputedValues')
     this.matchWholeCell = configValueFromParam(matchWholeCell, 'boolean', 'matchWholeCell')
     validateNumberToBeAtLeast(this.undoLimit, 'undoLimit', 0)
     this.maxRows = configValueFromParam(maxRows, 'number', 'maxRows')
