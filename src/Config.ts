@@ -43,6 +43,7 @@ export class Config implements ConfigParams, ParserConfig {
     functionArgSeparator: ',',
     functionPlugins: [],
     ignorePunctuation: false,
+    initialComputedValues: {},
     language: 'enGB',
     ignoreWhiteSpace: 'standard',
     licenseKey: '',
@@ -69,7 +70,6 @@ export class Config implements ConfigParams, ParserConfig {
     useColumnIndex: false,
     useStats: false,
     useArrayArithmetic: false,
-    initialComputedValues: {},
   }
 
   /** @inheritDoc */
@@ -112,6 +112,8 @@ export class Config implements ConfigParams, ParserConfig {
   /** @inheritDoc */
   public readonly ignorePunctuation: boolean
   /** @inheritDoc */
+  public readonly initialComputedValues: {[sheet: string]: (string | number)[][]}
+  /** @inheritDoc */
   public readonly localeLang: string
   /** @inheritDoc */
   public readonly evaluateNullToZero: boolean
@@ -141,8 +143,6 @@ export class Config implements ConfigParams, ParserConfig {
   public readonly undoLimit: number
   /** @inheritDoc */
   public readonly context: unknown
-    /** @inheritDoc */
-  public readonly initialComputedValues: {[sheet: string]: (string | number)[][]}
 
   /**
    * Built automatically based on translation package.
@@ -209,7 +209,6 @@ export class Config implements ConfigParams, ParserConfig {
       useColumnIndex,
       useRegularExpressions,
       useWildcards,
-      initialComputedValues
     } = options
 
     if (showDeprecatedWarns) {
@@ -229,6 +228,7 @@ export class Config implements ConfigParams, ParserConfig {
     this.decimalSeparator = configValueFromParam(decimalSeparator, ['.', ','], 'decimalSeparator')
     this.language = configValueFromParam(language, 'string', 'language')
     this.ignoreWhiteSpace = configValueFromParam(ignoreWhiteSpace, ['standard', 'any'], 'ignoreWhiteSpace')
+    this.initialComputedValues = validateInitialComputedValues(options, 'initialComputedValues')
     this.licenseKey = configValueFromParam(licenseKey, 'string', 'licenseKey')
     this.thousandSeparator = configValueFromParam(thousandSeparator, ['', ',', ' ', '.'], 'thousandSeparator')
     this.arrayColumnSeparator = configValueFromParam(arrayColumnSeparator, [',', ';'], 'arrayColumnSeparator')
@@ -256,7 +256,6 @@ export class Config implements ConfigParams, ParserConfig {
     this.undoLimit = configValueFromParam(undoLimit, 'number', 'undoLimit')
     this.useRegularExpressions = configValueFromParam(useRegularExpressions, 'boolean', 'useRegularExpressions')
     this.useWildcards = configValueFromParam(useWildcards, 'boolean', 'useWildcards')
-    this.initialComputedValues = validateInitialComputedValues(options, 'initialComputedValues')
     this.matchWholeCell = configValueFromParam(matchWholeCell, 'boolean', 'matchWholeCell')
     validateNumberToBeAtLeast(this.undoLimit, 'undoLimit', 0)
     this.maxRows = configValueFromParam(maxRows, 'number', 'maxRows')

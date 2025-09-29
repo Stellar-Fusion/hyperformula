@@ -3,17 +3,21 @@
  * Copyright (c) 2025 Handsoncode. All rights reserved.
  */
 
-import {Config} from './Config'
+import { Config } from './Config'
+import { ConfigParams, ConfigParamsList } from './ConfigParams'
 import {
   ConfigValueTooBigError,
   ConfigValueTooSmallError,
   ExpectedOneOfValuesError,
-  ExpectedValueOfTypeError
+  ExpectedValueOfTypeError,
 } from './errors'
-import {ConfigParams, ConfigParamsList} from './ConfigParams'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function configValueFromParam(inputValue: any, expectedType: string | string[], paramName: ConfigParamsList) {
+export function configValueFromParam(
+  inputValue: any,
+  expectedType: string | string[],
+  paramName: ConfigParamsList
+) {
   if (typeof inputValue === 'undefined') {
     return Config.defaultConfig[paramName]
   } else if (typeof expectedType === 'string') {
@@ -26,25 +30,41 @@ export function configValueFromParam(inputValue: any, expectedType: string | str
     if (expectedType.includes(inputValue)) {
       return inputValue
     } else {
-      throw new ExpectedOneOfValuesError(expectedType.map((val: string) => `'${val}'`).join(' '), paramName)
+      throw new ExpectedOneOfValuesError(
+        expectedType.map((val: string) => `'${val}'`).join(' '),
+        paramName
+      )
     }
   }
 }
 
-export function validateNumberToBeAtLeast(value: number, paramName: string, minimum: number) {
+export function validateNumberToBeAtLeast(
+  value: number,
+  paramName: string,
+  minimum: number
+) {
   if (value < minimum) {
     throw new ConfigValueTooSmallError(paramName, minimum)
   }
 }
 
-export function validateNumberToBeAtMost(value: number, paramName: string, maximum: number) {
+export function validateNumberToBeAtMost(
+  value: number,
+  paramName: string,
+  maximum: number
+) {
   if (value > maximum) {
     throw new ConfigValueTooBigError(paramName, maximum)
   }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function configValueFromParamCheck(inputValue: any, typeCheck: (object: any) => boolean, expectedType: string, paramName: ConfigParamsList) {
+export function configValueFromParamCheck(
+  inputValue: any,
+  typeCheck: (object: any) => boolean,
+  expectedType: string,
+  paramName: ConfigParamsList
+) {
   if (typeCheck(inputValue)) {
     return inputValue
   } else if (typeof inputValue === 'undefined') {
@@ -54,23 +74,46 @@ export function configValueFromParamCheck(inputValue: any, typeCheck: (object: a
   }
 }
 
-export function validateInitialComputedValues(config: Partial<ConfigParams> = {}, paramName: string) {
+export function validateInitialComputedValues(
+  config: Partial<ConfigParams> = {},
+  paramName: string
+) {
   const { initialComputedValues, allowCircularReferences } = config
 
-  if (!allowCircularReferences){
+  if (!allowCircularReferences) {
     return {}
   }
 
-  if (typeof initialComputedValues === 'object' && Object.values(initialComputedValues).every(sheet => {
-    return Array.isArray(sheet) && sheet.every(row => Array.isArray(row) && row.every(cell => typeof cell === 'string' || typeof cell === 'number' || cell === 'undefined'))
-  })) {
+  const doesObjectHaveCorrectTypes =
+    typeof initialComputedValues === 'object' &&
+    Object.values(initialComputedValues).every(
+      (sheet) =>
+        Array.isArray(sheet) &&
+        sheet.every(
+          (row) =>
+            Array.isArray(row) &&
+            row.every(
+              (cell) =>
+                typeof cell === 'string' ||
+                typeof cell === 'number' ||
+                typeof cell === 'undefined'
+            )
+        )
+    )
+
+  if (doesObjectHaveCorrectTypes) {
     return initialComputedValues
   }
 
-  throw new ExpectedValueOfTypeError('Object with values of string or number 2D arrays', paramName)
+  throw new ExpectedValueOfTypeError(
+    'Object with values of string or number 2D arrays',
+    paramName
+  )
 }
 
-export function configCheckIfParametersNotInConflict(...params: { value: number | string | boolean, name: string }[]) {
+export function configCheckIfParametersNotInConflict(
+  ...params: { value: number | string | boolean, name: string }[]
+) {
   const valuesMap: Map<number | string | boolean, string[]> = new Map()
 
   params.forEach((param) => {
@@ -87,14 +130,20 @@ export function configCheckIfParametersNotInConflict(...params: { value: number 
   }
 
   if (duplicates.length > 0) {
-    duplicates.forEach(entry => entry.sort())
-    const paramNames = duplicates.map(entry => `[${entry}]`).join('; ')
-    throw new Error(`Config initialization failed. Parameters in conflict: ${paramNames}`)
+    duplicates.forEach((entry) => entry.sort())
+    const paramNames = duplicates.map((entry) => `[${entry}]`).join('; ')
+    throw new Error(
+      `Config initialization failed. Parameters in conflict: ${paramNames}`
+    )
   }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function validateArgToType(inputValue: any, expectedType: string, paramName: string) {
+export function validateArgToType(
+  inputValue: any,
+  expectedType: string,
+  paramName: string
+) {
   if (typeof inputValue !== expectedType) {
     throw new ExpectedValueOfTypeError(expectedType, paramName)
   }
