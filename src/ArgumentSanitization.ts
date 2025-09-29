@@ -76,12 +76,12 @@ export function configValueFromParamCheck(
 
 export function validateInitialComputedValues(
   config: Partial<ConfigParams> = {},
-  paramName: string
-) {
+  paramName: string = 'initialComputedValues'
+ ): any {
   const { initialComputedValues, allowCircularReferences } = config
 
   if (!allowCircularReferences) {
-    return {}
+    return {} as { [sheetName: string]: (string | number)[][] }
   }
 
   const doesObjectHaveCorrectTypes =

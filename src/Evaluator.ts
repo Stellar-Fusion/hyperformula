@@ -155,7 +155,7 @@ export class Evaluator {
         const address = vertex.getAddress(this.lazilyTransformingAstService)
 
         const sheetName = this.dependencyGraph.sheetMapping.fetchDisplayName(address.sheet)
-        const sheetData = this.config.initialComputedValues[sheetName] || []
+        const sheetData = this.config.initialComputedValues?.[sheetName] || []
         const cellValue = (sheetData[address.row] || [])[address.col]
 
         vertex.setCellValue(cellValue !== undefined ? cellValue : 0)

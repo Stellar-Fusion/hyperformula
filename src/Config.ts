@@ -228,7 +228,7 @@ export class Config implements ConfigParams, ParserConfig {
     this.decimalSeparator = configValueFromParam(decimalSeparator, ['.', ','], 'decimalSeparator')
     this.language = configValueFromParam(language, 'string', 'language')
     this.ignoreWhiteSpace = configValueFromParam(ignoreWhiteSpace, ['standard', 'any'], 'ignoreWhiteSpace')
-    this.initialComputedValues = validateInitialComputedValues(options, 'initialComputedValues')
+    this.initialComputedValues = validateInitialComputedValues(options)
     this.licenseKey = configValueFromParam(licenseKey, 'string', 'licenseKey')
     this.thousandSeparator = configValueFromParam(thousandSeparator, ['', ',', ' ', '.'], 'thousandSeparator')
     this.arrayColumnSeparator = configValueFromParam(arrayColumnSeparator, [',', ';'], 'arrayColumnSeparator')
