@@ -55,7 +55,7 @@ export function configValueFromParamCheck(inputValue: any, typeCheck: (object: a
 }
 
 export function validateInitialComputedValues(config: Partial<ConfigParams> = {}, paramName: string) {
-  const {initialComputedValues, allowCircularReferences} = config
+  const { initialComputedValues, allowCircularReferences } = config
 
   if (!allowCircularReferences){
     return {}
@@ -67,7 +67,7 @@ export function validateInitialComputedValues(config: Partial<ConfigParams> = {}
     return initialComputedValues
   }
 
-  throw new ExpectedValueOfTypeError('object with string or number values', paramName)
+  throw new ExpectedValueOfTypeError('Object with values of string or number 2D arrays', paramName)
 }
 
 export function configCheckIfParametersNotInConflict(...params: { value: number | string | boolean, name: string }[]) {
