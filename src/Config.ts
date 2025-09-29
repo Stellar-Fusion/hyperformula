@@ -68,6 +68,7 @@ export class Config implements ConfigParams, ParserConfig {
     useColumnIndex: false,
     useStats: false,
     useArrayArithmetic: false,
+    initialComputedValues: {},
   }
 
   /** @inheritDoc */
@@ -139,6 +140,8 @@ export class Config implements ConfigParams, ParserConfig {
   public readonly undoLimit: number
   /** @inheritDoc */
   public readonly context: unknown
+    /** @inheritDoc */
+  public readonly initialComputedValues: {[sheet: string]: (string | number)[][]}
 
   /**
    * Built automatically based on translation package.
@@ -205,6 +208,7 @@ export class Config implements ConfigParams, ParserConfig {
       useColumnIndex,
       useRegularExpressions,
       useWildcards,
+      initialComputedValues
     } = options
 
     if (showDeprecatedWarns) {
@@ -213,7 +217,7 @@ export class Config implements ConfigParams, ParserConfig {
 
     this.useArrayArithmetic = configValueFromParam(useArrayArithmetic, 'boolean', 'useArrayArithmetic')
     this.accentSensitive = configValueFromParam(accentSensitive, 'boolean', 'accentSensitive')
-    this.allowCircularReferences = configValueFromParam(options.allowCircularReferences, 'boolean', 'allowCircularReferences')
+    this.allowCircularReferences = configValueFromParam(allowCircularReferences, 'boolean', 'allowCircularReferences')
     this.caseSensitive = configValueFromParam(caseSensitive, 'boolean', 'caseSensitive')
     this.caseFirst = configValueFromParam(caseFirst, ['upper', 'lower', 'false'], 'caseFirst')
     this.ignorePunctuation = configValueFromParam(ignorePunctuation, 'boolean', 'ignorePunctuation')
@@ -251,6 +255,7 @@ export class Config implements ConfigParams, ParserConfig {
     this.undoLimit = configValueFromParam(undoLimit, 'number', 'undoLimit')
     this.useRegularExpressions = configValueFromParam(useRegularExpressions, 'boolean', 'useRegularExpressions')
     this.useWildcards = configValueFromParam(useWildcards, 'boolean', 'useWildcards')
+    this.initialComputedValues = initialComputedValues ?? Config.defaultConfig.initialComputedValues
     this.matchWholeCell = configValueFromParam(matchWholeCell, 'boolean', 'matchWholeCell')
     validateNumberToBeAtLeast(this.undoLimit, 'undoLimit', 0)
     this.maxRows = configValueFromParam(maxRows, 'number', 'maxRows')

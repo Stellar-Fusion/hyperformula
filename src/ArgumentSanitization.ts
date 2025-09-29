@@ -10,7 +10,7 @@ import {
   ExpectedOneOfValuesError,
   ExpectedValueOfTypeError
 } from './errors'
-import {ConfigParamsList} from './ConfigParams'
+import {ConfigParams, ConfigParamsList} from './ConfigParams'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function configValueFromParam(inputValue: any, expectedType: string | string[], paramName: ConfigParamsList) {
@@ -52,6 +52,22 @@ export function configValueFromParamCheck(inputValue: any, typeCheck: (object: a
   } else {
     throw new ExpectedValueOfTypeError(expectedType, paramName)
   }
+}
+
+export function validateInitialComputedValues(config: Partial<ConfigParams> = {}, paramName: string) {
+  const {initialComputedValues, allowCircularReferences} = config
+
+  if (!allowCircularReferences){
+    return {}
+  }
+
+  if (typeof initialComputedValues === 'object' && Object.values(initialComputedValues).every(sheet => {
+    return Array.isArray(sheet) && sheet.every(row => Array.isArray(row) && row.every(cell => typeof cell === 'string' || typeof cell === 'number' || cell === 'undefined'))
+  })) {
+    return initialComputedValues
+  }
+
+  throw new ExpectedValueOfTypeError('object with string or number values', paramName)
 }
 
 export function configCheckIfParametersNotInConflict(...params: { value: number | string | boolean, name: string }[]) {

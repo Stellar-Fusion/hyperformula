@@ -38,7 +38,7 @@ export class Evaluator {
     this.stats.end(StatType.TOP_SORT)
 
     this.stats.measure(StatType.EVALUATION, () => {
-      this.recomputeFormulas(cycled, sorted)
+      this.recomputeFormulas(cycled, sorted, true)
     })
   }
 
@@ -108,8 +108,8 @@ export class Evaluator {
   /**
    * Recalculates formulas in the topological sort order
    */
-  private recomputeFormulas(cycled: Vertex[], sorted: Vertex[]): void {
-    this.iterateCircularDependencies(cycled)
+  private recomputeFormulas(cycled: Vertex[], sorted: Vertex[], isInitial: boolean): void {
+    this.iterateCircularDependencies(cycled, undefined, isInitial)
 
     sorted.forEach((vertex: Vertex) => {
       if (vertex instanceof FormulaVertex) {
@@ -144,9 +144,25 @@ export class Evaluator {
    * Iterates over all circular dependencies (cycled vertices) for 100 iterations
    * Handles cascading dependencies by processing cycles in dependency order
    */
-  private iterateCircularDependencies(cycled: Vertex[], cycles = this.iterationCount): ContentChanges {
+  private iterateCircularDependencies(cycled: Vertex[], cycles = this.iterationCount, isInitial = false): ContentChanges {
     if (!this.config.allowCircularReferences) {
       return this.blockCircularDependencies(cycled)
+    }
+
+    if (isInitial){
+      cycled.forEach((vertex: Vertex) => {
+      if (vertex instanceof FormulaVertex && !vertex.isComputed()) {
+        const address = vertex.getAddress(this.lazilyTransformingAstService)
+
+        const sheetName = this.dependencyGraph.sheetMapping.fetchDisplayName(address.sheet)
+        const sheetData = this.config.initialComputedValues[sheetName] || []
+        const cellValue = (sheetData[address.row] || [])[address.col]
+
+        vertex.setCellValue(cellValue !== undefined ? cellValue : 0)
+      }
+    })
+
+    return ContentChanges.empty()
     }
     
     const changes = ContentChanges.empty()
