@@ -64,7 +64,7 @@ export class BuildEngineFactory {
    */
   public static buildFromSheets(sheets: Sheets, configInput: Partial<ConfigParams> = {}, namedExpressions: SerializedNamedExpression[] = []): EngineState {
     const config = new Config(configInput)
-    return this.buildEngine(config, sheets, namedExpressions, undefined)
+    return this.buildEngine(config, sheets, namedExpressions)
   }
 
   /**
@@ -88,7 +88,7 @@ export class BuildEngineFactory {
       }
     }
     
-    return this.buildEngine(config, sheets, namedExpressions, undefined)
+    return this.buildEngine(config, sheets, namedExpressions)
   }
 
   /**
@@ -100,7 +100,7 @@ export class BuildEngineFactory {
    */
   public static buildEmpty(configInput: Partial<ConfigParams> = {}, namedExpressions: SerializedNamedExpression[] = []): EngineState {
     const config = new Config(configInput)
-    return this.buildEngine(config, {}, namedExpressions, undefined)
+    return this.buildEngine(config, {}, namedExpressions)
   }
 
   /**
