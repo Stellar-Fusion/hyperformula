@@ -47,35 +47,12 @@ export type EngineState = {
   functionRegistry: FunctionRegistry,
 }
 
-/**
- * Factory class for building HyperFormula engine instances with various configurations.
- * Provides static methods to create engines from sheets, single sheet, or empty configurations.
- * @category Core
- */
 export class BuildEngineFactory {
-  /**
-   * Creates an engine instance from multiple sheets with optional configuration and named expressions.
-   * Uses initialComputedValues from config for circular dependency resolution.
-   * @param {Sheets} sheets - The sheets to build the engine from
-   * @param {Partial<ConfigParams>} configInput - Optional configuration parameters
-   * @param {SerializedNamedExpression[]} namedExpressions - Optional serialized named expressions
-   * @returns {EngineState} The constructed engine state
-   * @category Factory Methods
-   */
   public static buildFromSheets(sheets: Sheets, configInput: Partial<ConfigParams> = {}, namedExpressions: SerializedNamedExpression[] = []): EngineState {
     const config = new Config(configInput)
     return this.buildEngine(config, sheets, namedExpressions)
   }
 
-  /**
-   * Creates an engine instance from a single sheet with optional configuration and named expressions.
-   * Maps initialComputedValues to match the generated sheet name for circular dependency resolution.
-   * @param {Sheet} sheet - The sheet to build the engine from
-   * @param {Partial<ConfigParams>} configInput - Optional configuration parameters
-   * @param {SerializedNamedExpression[]} namedExpressions - Optional serialized named expressions
-   * @returns {EngineState} The constructed engine state
-   * @category Factory Methods
-   */
   public static buildFromSheet(sheet: Sheet, configInput: Partial<ConfigParams> = {}, namedExpressions: SerializedNamedExpression[] = []): EngineState {
     const config = new Config(configInput)
     const newsheetprefix = config.translationPackage.getUITranslation(UIElement.NEW_SHEET_PREFIX) + '1'
@@ -91,40 +68,14 @@ export class BuildEngineFactory {
     return this.buildEngine(config, sheets, namedExpressions)
   }
 
-  /**
-   * Creates an empty engine instance with optional configuration and named expressions.
-   * @param {Partial<ConfigParams>} configInput - Optional configuration parameters
-   * @param {SerializedNamedExpression[]} namedExpressions - Optional serialized named expressions
-   * @returns {EngineState} The constructed engine state
-   * @category Factory Methods
-   */
   public static buildEmpty(configInput: Partial<ConfigParams> = {}, namedExpressions: SerializedNamedExpression[] = []): EngineState {
-    const config = new Config(configInput)
-    return this.buildEngine(config, {}, namedExpressions)
+    return this.buildEngine(new Config(configInput), {}, namedExpressions)
   }
 
-  /**
-   * Rebuilds an engine instance with existing configuration, sheets, named expressions, and statistics.
-   * @param {Config} config - The configuration object
-   * @param {Sheets} sheets - The sheets to build the engine from
-   * @param {SerializedNamedExpression[]} namedExpressions - Serialized named expressions
-   * @param {Statistics} stats - Existing statistics object
-   * @returns {EngineState} The constructed engine state
-   * @category Factory Methods
-   */
   public static rebuildWithConfig(config: Config, sheets: Sheets, namedExpressions: SerializedNamedExpression[], stats: Statistics): EngineState {
     return this.buildEngine(config, sheets, namedExpressions, stats)
   }
 
-  /**
-   * Core engine building method that handles the construction of the engine state.
-   * @param {Config} config - The configuration object
-   * @param {Sheets} sheets - The sheets to build the engine from
-   * @param {SerializedNamedExpression[]} inputNamedExpressions - Named expressions to add
-   * @param {Statistics} stats - Statistics tracking object
-   * @returns {EngineState} The constructed engine state
-   * @private
-   */
   private static buildEngine(
     config: Config, 
     sheets: Sheets = {}, 
