@@ -24,6 +24,7 @@ import {FunctionPluginDefinition} from './interpreter'
 import {Maybe} from './Maybe'
 import {ParserConfig} from './parser/ParserConfig'
 import {ConfigParams, ConfigParamsList} from './ConfigParams'
+import { InitialComputedValues } from './Sheet'
 
 const privatePool: WeakMap<Config, { licenseKeyValidityState: LicenseKeyValidityState }> = new WeakMap()
 
@@ -112,7 +113,7 @@ export class Config implements ConfigParams, ParserConfig {
   /** @inheritDoc */
   public readonly ignorePunctuation: boolean
   /** @inheritDoc */
-  public readonly initialComputedValues: {[sheet: string]: (string | number)[][]}
+  public initialComputedValues: InitialComputedValues
   /** @inheritDoc */
   public readonly localeLang: string
   /** @inheritDoc */
