@@ -11,6 +11,7 @@ import {
   ExpectedOneOfValuesError,
   ExpectedValueOfTypeError,
 } from './errors'
+import { InitialComputedValues } from './Sheet'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function configValueFromParam(
@@ -81,7 +82,12 @@ export function validateInitialComputedValues(
   const { initialComputedValues, allowCircularReferences } = config
 
   if (!allowCircularReferences) {
-    return {} as { [sheetName: string]: (string | number)[][] }
+    return {} as InitialComputedValues
+  }
+
+  // If allowCircularReferences is true but initialComputedValues is not provided, return empty object
+  if (!initialComputedValues) {
+    return {} as InitialComputedValues
   }
 
   const doesObjectHaveCorrectTypes =

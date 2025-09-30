@@ -6,6 +6,7 @@
 import {ChooseAddressMapping} from './DependencyGraph/AddressMapping/ChooseAddressMappingPolicy'
 import {DateTime, SimpleDate, SimpleDateTime, SimpleTime} from './DateTimeHelper'
 import {Maybe} from './Maybe'
+import { InitialComputedValues } from './Sheet'
 
 export interface ConfigParams {
   /**
@@ -401,7 +402,7 @@ export interface ConfigParams {
    * @default {}
    * @category Engine
    */
-  initialComputedValues: {[sheet: string]: (string | number)[][]},
+  initialComputedValues: InitialComputedValues,
 }
 
 export type ConfigParamsList = keyof ConfigParams

@@ -6,6 +6,8 @@
 import {RawCellContent} from './CellContentParser'
 import {InvalidArgumentsError} from './errors'
 
+export type InitialComputedValues = Record<string, (string | number)[][]>
+
 /**
  * Two-dimenstional array representation of sheet
  */
