@@ -85,7 +85,6 @@ export function validateInitialComputedValues(
     return {} as InitialComputedValues
   }
 
-  // If allowCircularReferences is true but initialComputedValues is not provided, return empty object
   if (!initialComputedValues) {
     return {} as InitialComputedValues
   }

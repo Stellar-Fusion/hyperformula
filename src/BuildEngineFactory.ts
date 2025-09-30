@@ -64,7 +64,6 @@ export class BuildEngineFactory {
    */
   public static buildFromSheets(sheets: Sheets, configInput: Partial<ConfigParams> = {}, namedExpressions: SerializedNamedExpression[] = []): EngineState {
     const config = new Config(configInput)
-    // initialComputedValues is already a Sheets object, use directly
     return this.buildEngine(config, sheets, namedExpressions, undefined)
   }
 
@@ -82,9 +81,7 @@ export class BuildEngineFactory {
     const newsheetprefix = config.translationPackage.getUITranslation(UIElement.NEW_SHEET_PREFIX) + '1'
     const sheets = {[newsheetprefix]: sheet}
     
-    // Convert initialComputedValues to match the sheet structure
     if (config.initialComputedValues) {
-      // If initialComputedValues is provided, map it to the same sheet name
       const firstSheetName = Object.keys(config.initialComputedValues)[0]
       if (firstSheetName) {
         config['initialComputedValues'] = {[newsheetprefix]: config.initialComputedValues[firstSheetName]}
@@ -103,7 +100,6 @@ export class BuildEngineFactory {
    */
   public static buildEmpty(configInput: Partial<ConfigParams> = {}, namedExpressions: SerializedNamedExpression[] = []): EngineState {
     const config = new Config(configInput)
-    // For empty builds, initialComputedValues should also be empty
     return this.buildEngine(config, {}, namedExpressions, undefined)
   }
 
@@ -117,7 +113,6 @@ export class BuildEngineFactory {
    * @category Factory Methods
    */
   public static rebuildWithConfig(config: Config, sheets: Sheets, namedExpressions: SerializedNamedExpression[], stats: Statistics): EngineState {
-    // Use the initialComputedValues from the existing config
     return this.buildEngine(config, sheets, namedExpressions, stats)
   }
 
@@ -127,7 +122,6 @@ export class BuildEngineFactory {
    * @param {Sheets} sheets - The sheets to build the engine from
    * @param {SerializedNamedExpression[]} inputNamedExpressions - Named expressions to add
    * @param {Statistics} stats - Statistics tracking object
-   * @param {InitialComputedValues} initialComputedValues - Pre-computed values for circular dependency resolution
    * @returns {EngineState} The constructed engine state
    * @private
    */
@@ -136,7 +130,6 @@ export class BuildEngineFactory {
     sheets: Sheets = {}, 
     inputNamedExpressions: SerializedNamedExpression[] = [], 
     stats: Statistics = config.useStats ? new Statistics() : new EmptyStatistics(),
-    initialComputedValues: InitialComputedValues = {}
   ): EngineState {
     stats.start(StatType.BUILD_ENGINE_TOTAL)
 
