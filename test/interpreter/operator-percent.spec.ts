@@ -48,6 +48,28 @@ describe('Percent operator', () => {
     expect(engine.getCellValue(adr('A1'))).toEqual(0.01)
   })
 
+  it('supports multiple % signs (Excel-compatible)', () => {
+    const engine = HyperFormula.buildFromArray([
+      ['=4%%'],
+      ['=100%%%'],
+      ['=4%%+1'],
+      ['=2*4%%'],
+    ])
+
+    expect(engine.getCellValue(adr('A1'))).toBeCloseTo(0.0004, 10)
+    expect(engine.getCellValue(adr('A2'))).toBeCloseTo(0.0001, 10)
+    expect(engine.getCellValue(adr('A3'))).toBeCloseTo(1.0004, 10)
+    expect(engine.getCellValue(adr('A4'))).toBeCloseTo(0.0008, 10)
+  })
+
+  it('multi-% formula referencing an undefined name returns #NAME? (matches Excel)', () => {
+    const engine = HyperFormula.buildFromArray([['=100%%*foo']])
+
+    expect(engine.getCellValue(adr('A1'))).toEqualError(
+      detailedError(ErrorType.NAME, ErrorMessage.NamedExpressionName('foo')),
+    )
+  })
+
   it('range value results in VALUE error', () => {
     const engine = HyperFormula.buildFromArray([
       ['1'],
