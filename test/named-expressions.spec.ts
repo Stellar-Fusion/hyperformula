@@ -2031,10 +2031,10 @@ describe('getNamedExpressionsFromFormula method', () => {
       engine.addNamedExpression('foo', '=42')
 
       expect(() => engine.getNamedExpressionsFromFormula('=#FOO!')).toThrow(new NotAFormulaError())
-      expect(() => engine.getNamedExpressionsFromFormula('=100%%*foo')).toThrow(new NotAFormulaError())
       expect(() => engine.getNamedExpressionsFromFormula('=@foo')).toThrow(new NotAFormulaError())
       expect(() => engine.getNamedExpressionsFromFormula("=foo'bar")).toThrow(new NotAFormulaError())
       expect(() => engine.getNamedExpressionsFromFormula('=\u00A0foo')).toThrow(new NotAFormulaError())
+      expectArrayWithSameContent(engine.getNamedExpressionsFromFormula('=100%%*foo'), ['foo'])
     })
   })
 
@@ -2110,10 +2110,10 @@ describe('getNamedExpressionsFromFormula method', () => {
       ])
 
       expect(() => engine.getNamedExpressionsFromFormula('=#FOO!')).toThrow(new NotAFormulaError())
-      expect(() => engine.getNamedExpressionsFromFormula('=100%%*foo')).toThrow(new NotAFormulaError())
       expect(() => engine.getNamedExpressionsFromFormula('=@foo')).toThrow(new NotAFormulaError())
       expect(() => engine.getNamedExpressionsFromFormula("=foo'bar")).toThrow(new NotAFormulaError())
       expect(() => engine.getNamedExpressionsFromFormula('=\u00A0foo')).toThrow(new NotAFormulaError())
+      expectArrayWithSameContent(engine.getNamedExpressionsFromFormula('=100%%*foo'), ['foo'])
     })
   })
 })

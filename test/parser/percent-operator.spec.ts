@@ -61,10 +61,25 @@ describe('percent', () => {
     expect(ast.value.type).toBe(AstNodeType.FUNCTION_CALL)
   })
 
-  it('%% should not parse', () => {
+  it('%% parses as nested PERCENT_OP (Excel-compatible)', () => {
     const parser = buildEmptyParserWithCaching(new Config())
 
     const ast = parser.parse('=100%%', adr('A1')).ast as PercentOpAst
-    expect(ast.type).toBe(AstNodeType.ERROR)
+    expect(ast.type).toBe(AstNodeType.PERCENT_OP)
+    const inner = ast.value as PercentOpAst
+    expect(inner.type).toBe(AstNodeType.PERCENT_OP)
+    expect(inner.value.type).toBe(AstNodeType.NUMBER)
+  })
+
+  it('three % signs parse as triple-nested PERCENT_OP', () => {
+    const parser = buildEmptyParserWithCaching(new Config())
+
+    const ast = parser.parse('=100%%%', adr('A1')).ast as PercentOpAst
+    expect(ast.type).toBe(AstNodeType.PERCENT_OP)
+    const inner1 = ast.value as PercentOpAst
+    expect(inner1.type).toBe(AstNodeType.PERCENT_OP)
+    const inner2 = inner1.value as PercentOpAst
+    expect(inner2.type).toBe(AstNodeType.PERCENT_OP)
+    expect(inner2.value.type).toBe(AstNodeType.NUMBER)
   })
 })
