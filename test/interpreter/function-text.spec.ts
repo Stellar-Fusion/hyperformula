@@ -16,6 +16,16 @@ describe('TEXT()', () => {
     expect(engine.getCellValue(adr('B1'))).toEqual('01/01/1900')
   })
 
+  it('formats a fraction as a percentage', () => {
+    const engine = HyperFormula.buildFromArray([
+      [0.032, '=TEXT(A1, "0.0%")'],
+      [0.1, '=TEXT(A2, "0.0%")'],
+    ])
+
+    expect(engine.getCellValue(adr('B1'))).toEqual('3.2%')
+    expect(engine.getCellValue(adr('B2'))).toEqual('10.0%')
+  })
+
   it('wrong number of arguments', () => {
     const engine = HyperFormula.buildFromArray([
       ['=TEXT(42)'],

@@ -47,4 +47,20 @@ describe('FormatInterpreter', () => {
   it('number formatting with additional chars', () => {
     expect(format(1, '$0.00', config, dateHelper)).toEqual('$1.00')
   })
+
+  it('scales by 100 for the percent format token', () => {
+    expect(format(0.032, '0.0%', config, dateHelper)).toEqual('3.2%')
+    expect(format(0.1, '0.0%', config, dateHelper)).toEqual('10.0%')
+    expect(format(0.032, '0.00%', config, dateHelper)).toEqual('3.20%')
+    expect(format(0.5, '0%', config, dateHelper)).toEqual('50%')
+  })
+
+  it('scales by 100 once per percent sign', () => {
+    expect(format(0.5, '0%%', config, dateHelper)).toEqual('5000%%')
+  })
+
+  it('leaves non-percent formats unscaled', () => {
+    expect(format(12.34, '0.00', config, dateHelper)).toEqual('12.34')
+    expect(format(2, 'dd-mm-yyyy', config, dateHelper)).toEqual('01-01-1900')
+  })
 })

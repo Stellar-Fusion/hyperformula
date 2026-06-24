@@ -46,8 +46,20 @@ function countChars(text: string, char: string) {
   return text.split(char).length - 1
 }
 
+function countPercentSigns(tokens: FormatToken[]): number {
+  return tokens
+    .filter((token) => token.type === TokenType.FREE_TEXT)
+    .reduce((count, token) => count + countChars(token.value, '%'), 0)
+}
+
 function numberFormat(tokens: FormatToken[], value: number): RawScalarValue {
   let result = ''
+
+  /* Excel's `%` format token scales the displayed value by 100 for each `%` in the format
+   * (e.g. "0.0%" renders 0.032 as "3.2%"). The `%` literal is emitted as free text by the
+   * loop below; here we only scale the numeric value before its digits are formatted. */
+  const percentSigns = countPercentSigns(tokens)
+  value = value * 100 ** percentSigns
 
   for (let i = 0; i < tokens.length; ++i) {
     const token = tokens[i]
