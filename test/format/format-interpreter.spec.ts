@@ -59,6 +59,20 @@ describe('FormatInterpreter', () => {
     expect(format(0.5, '0%%', config, dateHelper)).toEqual('5000%%')
   })
 
+  it('rounds the percent like Excel despite binary floating-point noise', () => {
+    // 0.0295 * 100 === 2.9499999999999997, which naively rounds down to "2.9%".
+    // Excel normalises to 15 significant digits first, so it shows "3.0%".
+    expect(format(0.0295, '0.0%', config, dateHelper)).toEqual('3.0%')
+  })
+
+  it('rounds halves away from zero like Excel', () => {
+    // 3.15 rounds half-to-even (toFixed) to "3.1"; Excel rounds half away from zero to "3.2".
+    expect(format(0.0315, '0.0%', config, dateHelper)).toEqual('3.2%')
+    expect(format(-0.0315, '0.0%', config, dateHelper)).toEqual('-3.2%')
+    expect(format(2.5, '0', config, dateHelper)).toEqual('3')
+    expect(format(-2.5, '0', config, dateHelper)).toEqual('-3')
+  })
+
   it('leaves non-percent formats unscaled', () => {
     expect(format(12.34, '0.00', config, dateHelper)).toEqual('12.34')
     expect(format(2, 'dd-mm-yyyy', config, dateHelper)).toEqual('01-01-1900')
