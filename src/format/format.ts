@@ -52,6 +52,20 @@ function countPercentSigns(tokens: FormatToken[]): number {
     .reduce((count, token) => count + countChars(token.value, '%'), 0)
 }
 
+/* Excel rounds halves away from zero (2.5 -> 3, -2.5 -> -3), unlike JS toFixed which rounds
+ * half-to-even on the binary value. Shifting through the decimal string (rather than value * 10**d)
+ * avoids re-introducing floating-point noise. ponytail: values >= 1e15 have no meaningful
+ * fractional digits in a double, so skip the shift (whose `e`-notation string would break) and
+ * return them unchanged. */
+function roundHalfAwayFromZero(value: number, decimals: number): number {
+  if (!isFinite(value) || Math.abs(value) >= 1e15) {
+    return value
+  }
+  const sign = value < 0 ? -1 : 1
+  const shifted = Math.round(Number(`${Math.abs(value)}e${decimals}`))
+  return sign * Number(`${shifted}e${-decimals}`)
+}
+
 function numberFormat(tokens: FormatToken[], value: number): RawScalarValue {
   let result = ''
 
@@ -60,6 +74,14 @@ function numberFormat(tokens: FormatToken[], value: number): RawScalarValue {
    * loop below; here we only scale the numeric value before its digits are formatted. */
   const percentSigns = countPercentSigns(tokens)
   value = value * 100 ** percentSigns
+
+  /* Excel rounds display values to 15 significant digits. Normalising here absorbs binary
+   * floating-point noise (e.g. 0.0295 * 100 === 2.9499999999999997) so the per-token rounding
+   * below matches Excel (2.95 -> "3.0%" rather than "2.9%"). `value` is finite here: the
+   * date/duration branches in `format()` run first, so only real numbers reach `numberFormat`. */
+  if (value !== 0) {
+    value = Number(value.toPrecision(15))
+  }
 
   for (let i = 0; i < tokens.length; ++i) {
     const token = tokens[i]
@@ -74,7 +96,7 @@ function numberFormat(tokens: FormatToken[], value: number): RawScalarValue {
     const separator = tokenParts[1] ? '.' : ''
 
     /* get fixed-point number without trailing zeros */
-    const valueParts = Number(value.toFixed(decimalFormat.length)).toString().split('.')
+    const valueParts = roundHalfAwayFromZero(value, decimalFormat.length).toString().split('.')
     let integerPart = valueParts[0] || ''
     let decimalPart = valueParts[1] || ''
 
