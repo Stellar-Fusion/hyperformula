@@ -26,6 +26,18 @@ describe('TEXT()', () => {
     expect(engine.getCellValue(adr('B2'))).toEqual('10.0%')
   })
 
+  it('selects the correct section of a multi-section format by sign', () => {
+    const engine = HyperFormula.buildFromArray([
+      [0.0506, '=TEXT(A1, "0%;(0)%")'],
+      [-0.23, '=TEXT(A2, "0%;(0)%")'],
+      [0, '=TEXT(A3, "0%;(0)%")'],
+    ])
+
+    expect(engine.getCellValue(adr('B1'))).toEqual('5%')
+    expect(engine.getCellValue(adr('B2'))).toEqual('(23)%')
+    expect(engine.getCellValue(adr('B3'))).toEqual('0%')
+  })
+
   it('wrong number of arguments', () => {
     const engine = HyperFormula.buildFromArray([
       ['=TEXT(42)'],
