@@ -13,6 +13,14 @@ describe('FormatInterpreter', () => {
     expect(format(2, 'dd-mm-yyyy', config, dateHelper)).toEqual('01-01-1900')
   })
 
+  it('selects the date section of a multi-section format and formats it as a date', () => {
+    expect(format(2, 'dd-mm-yyyy;@', config, dateHelper)).toEqual('01-01-1900')
+  })
+
+  it('renders a pure-text section as stripped display text, not the raw quoted pattern', () => {
+    expect(format(0, '#,##0;(#,##0);"-"', config, dateHelper)).toEqual('-')
+  })
+
   it('works with # without decimal separator', () => {
     expect(format(1, '###', config, dateHelper)).toEqual('1')
     expect(format(12, '###', config, dateHelper)).toEqual('12')

@@ -53,7 +53,15 @@ function selectNumberFormatSection(sections: string[], value: number): { section
   return {sectionFormat: sections[0], sectionValue: value}
 }
 
-export function format(value: number, formatArg: string, config: Config, dateHelper: DateTimeHelper): RawScalarValue {
+/* Strip Excel format-literal quoting from a pure-text section: "..." quotes and \ escapes, so an
+ * accounting zero section like "-" renders as - rather than the raw quoted pattern. */
+function stripFormatLiteral(section: string): string {
+  return section.replace(/\\(.)/g, '$1').replace(/"/g, '')
+}
+
+/* Dispatch a single (already section-selected) format through the date, duration, then number
+ * formatters — the original single-format behaviour. */
+function formatSection(value: number, formatArg: string, config: Config, dateHelper: DateTimeHelper): RawScalarValue {
   const tryDateTime = config.stringifyDateTime(dateHelper.numberToSimpleDateTime(value), formatArg) // default points to defaultStringifyDateTime()
   if (tryDateTime !== undefined) {
     return tryDateTime
@@ -64,18 +72,23 @@ export function format(value: number, formatArg: string, config: Config, dateHel
   }
   const expression = parseForNumberFormat(formatArg)
   if (expression !== undefined) {
-    const sections = splitFormatSections(formatArg)
-    if (sections.length <= 1) {
-      return numberFormat(expression.tokens, value)
-    }
-    const {sectionFormat, sectionValue} = selectNumberFormatSection(sections, value)
-    const sectionExpression = parseForNumberFormat(sectionFormat)
-    if (sectionExpression === undefined) {
-      return sectionFormat
-    }
-    return numberFormat(sectionExpression.tokens, sectionValue)
+    return numberFormat(expression.tokens, value)
   }
   return formatArg
+}
+
+export function format(value: number, formatArg: string, config: Config, dateHelper: DateTimeHelper): RawScalarValue {
+  const sections = splitFormatSections(formatArg)
+  if (sections.length <= 1) {
+    return formatSection(value, formatArg, config, dateHelper)
+  }
+  // Select the sign-appropriate section first, then dispatch it through every formatter (date,
+  // duration, number) — not just the number path — so a date/duration first section is honoured.
+  const {sectionFormat, sectionValue} = selectNumberFormatSection(sections, value)
+  const formatted = formatSection(sectionValue, sectionFormat, config, dateHelper)
+  // A pure-text section parses as nothing and round-trips unchanged; strip its quoting so it renders
+  // as display text instead of the raw format pattern.
+  return formatted === sectionFormat ? stripFormatLiteral(sectionFormat) : formatted
 }
 
 export function padLeft(number: number | string, size: number) {
