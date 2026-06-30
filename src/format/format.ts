@@ -10,6 +10,49 @@ import {RawScalarValue} from '../interpreter/InterpreterValue'
 import {Maybe} from '../Maybe'
 import {FormatToken, parseForDateTimeFormat, parseForNumberFormat, TokenType} from './parser'
 
+/* Excel number formats may carry up to four `;`-separated sections: positive;negative;zero;text.
+ * Split at the top level only — a `;` inside a quoted literal ("...") or escaped (\;) is literal
+ * text, not a separator. ponytail: the 4th (text) section is irrelevant for numeric values. */
+function splitFormatSections(formatArg: string): string[] {
+  const sections: string[] = []
+  let current = ''
+  let inQuote = false
+  for (let i = 0; i < formatArg.length; ++i) {
+    const char = formatArg[i]
+    if (char === '\\' && i + 1 < formatArg.length) {
+      current += char + formatArg[i + 1]
+      ++i
+      continue
+    }
+    if (char === '"') {
+      inQuote = !inQuote
+      current += char
+      continue
+    }
+    if (char === ';' && !inQuote) {
+      sections.push(current)
+      current = ''
+      continue
+    }
+    current += char
+  }
+  sections.push(current)
+  return sections
+}
+
+/* Pick the section matching the value's sign (Excel rules): positive -> [0]; negative -> [1]
+ * formatted with the absolute value (the section supplies its own sign/parens); zero -> [2].
+ * Missing negative/zero sections fall back to [0] (where a negative value keeps its `-`). */
+function selectNumberFormatSection(sections: string[], value: number): { sectionFormat: string, sectionValue: number } {
+  if (value < 0 && sections[1] !== undefined && sections[1] !== '') {
+    return {sectionFormat: sections[1], sectionValue: Math.abs(value)}
+  }
+  if (value === 0 && sections[2] !== undefined && sections[2] !== '') {
+    return {sectionFormat: sections[2], sectionValue: value}
+  }
+  return {sectionFormat: sections[0], sectionValue: value}
+}
+
 export function format(value: number, formatArg: string, config: Config, dateHelper: DateTimeHelper): RawScalarValue {
   const tryDateTime = config.stringifyDateTime(dateHelper.numberToSimpleDateTime(value), formatArg) // default points to defaultStringifyDateTime()
   if (tryDateTime !== undefined) {
@@ -21,7 +64,16 @@ export function format(value: number, formatArg: string, config: Config, dateHel
   }
   const expression = parseForNumberFormat(formatArg)
   if (expression !== undefined) {
-    return numberFormat(expression.tokens, value)
+    const sections = splitFormatSections(formatArg)
+    if (sections.length <= 1) {
+      return numberFormat(expression.tokens, value)
+    }
+    const {sectionFormat, sectionValue} = selectNumberFormatSection(sections, value)
+    const sectionExpression = parseForNumberFormat(sectionFormat)
+    if (sectionExpression === undefined) {
+      return sectionFormat
+    }
+    return numberFormat(sectionExpression.tokens, sectionValue)
   }
   return formatArg
 }
