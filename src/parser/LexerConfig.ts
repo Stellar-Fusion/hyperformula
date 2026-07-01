@@ -13,6 +13,7 @@ import {
   ODFF_WHITESPACE_PATTERN,
   RANGE_OPERATOR,
   ROW_REFERENCE_PATTERN,
+  SHEET_NAME_PATTERN,
   UNICODE_LETTER_PATTERN,
 } from './parser-consts'
 import {CellReferenceMatcher} from './CellReferenceMatcher'
@@ -41,7 +42,7 @@ export const ArrayLParen = createToken({name: 'ArrayLParen', pattern: /{/})
 export const ArrayRParen = createToken({name: 'ArrayRParen', pattern: /}/})
 
 export const StringLiteral = createToken({name: 'StringLiteral', pattern: /"([^"\\]*(\\.[^"\\]*)*)"/})
-export const ErrorLiteral = createToken({name: 'ErrorLiteral', pattern: /#[A-Za-z0-9\/]+[?!]?/})
+export const ErrorLiteral = createToken({name: 'ErrorLiteral', pattern: new RegExp(`(${SHEET_NAME_PATTERN})?#[A-Za-z0-9\\/]+[?!]?`)})
 
 export const RangeSeparator = createToken({ name: 'RangeSeparator', pattern: new RegExp(RANGE_OPERATOR) })
 export const ColumnRange = createToken({ name: 'ColumnRange', pattern: new RegExp(`${COLUMN_REFERENCE_PATTERN}${RANGE_OPERATOR}${COLUMN_REFERENCE_PATTERN}`) })

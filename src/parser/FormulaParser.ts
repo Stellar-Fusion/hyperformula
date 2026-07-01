@@ -547,7 +547,8 @@ export class FormulaParser extends EmbeddedActionsParser {
       {
         ALT: () => {
           const token = this.CONSUME(ErrorLiteral) as ExtendedToken
-          const errString = token.image.toUpperCase()
+          const image = token.image.toUpperCase()
+          const errString = image.slice(image.lastIndexOf('#'))
           const errorType = this.lexerConfig.errorMapping[errString]
           if (errorType) {
             return buildCellErrorAst(new CellError(errorType), token.leadingWhitespace)
