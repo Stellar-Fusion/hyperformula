@@ -21,6 +21,12 @@ describe('FormatInterpreter', () => {
     expect(format(0, '#,##0;(#,##0);"-"', config, dateHelper)).toEqual('-')
   })
 
+  it('renders an explicitly empty section as an empty string (Excel display-nothing)', () => {
+    expect(format(5, '0;;', config, dateHelper)).toEqual('5')
+    expect(format(-5, '0;;', config, dateHelper)).toEqual('')
+    expect(format(0, '0;;', config, dateHelper)).toEqual('')
+  })
+
   it('works with # without decimal separator', () => {
     expect(format(1, '###', config, dateHelper)).toEqual('1')
     expect(format(12, '###', config, dateHelper)).toEqual('12')
