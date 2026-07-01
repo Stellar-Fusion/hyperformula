@@ -13,6 +13,22 @@ describe('FormatInterpreter', () => {
     expect(format(2, 'dd-mm-yyyy', config, dateHelper)).toEqual('01-01-1900')
   })
 
+  it('renders the abbreviated month name for mmm', () => {
+    expect(format(2, 'mmm', config, dateHelper)).toEqual('Jan')
+  })
+
+  it('renders the full month name for mmmm', () => {
+    expect(format(2, 'mmmm', config, dateHelper)).toEqual('January')
+  })
+
+  it('renders the single-letter month for mmmmm', () => {
+    expect(format(2, 'mmmmm', config, dateHelper)).toEqual('J')
+  })
+
+  it('renders a full-month-name date expression (mmmm d, yyyy)', () => {
+    expect(format(2, 'mmmm d, yyyy', config, dateHelper)).toEqual('January 1, 1900')
+  })
+
   it('selects the date section of a multi-section format and formats it as a date', () => {
     expect(format(2, 'dd-mm-yyyy;@', config, dateHelper)).toEqual('01-01-1900')
   })
