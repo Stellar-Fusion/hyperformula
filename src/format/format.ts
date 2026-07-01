@@ -113,10 +113,51 @@ function countChars(text: string, char: string) {
   return text.split(char).length - 1
 }
 
+/* Strip Excel format-literal syntax from free text: `\x` escapes (keep x) and `"..."` quote
+ * delimiters, leaving the display text (e.g. `\%` and `"%"` both render as `%`). */
+function renderFormatLiteral(text: string): string {
+  let result = ''
+  for (let i = 0; i < text.length; ++i) {
+    const ch = text[i]
+    if (ch === '\\' && i + 1 < text.length) {
+      result += text[i + 1]
+      ++i
+      continue
+    }
+    if (ch === '"') {
+      continue
+    }
+    result += ch
+  }
+  return result
+}
+
+/* Count only ACTIVE percent signs — Excel format tokens, not display text. An escaped `\%` or a `%`
+ * inside a `"..."` quoted literal is display text and must not scale the value by 100. */
+function countActivePercent(text: string): number {
+  let count = 0
+  let inQuote = false
+  for (let i = 0; i < text.length; ++i) {
+    const ch = text[i]
+    if (ch === '\\' && i + 1 < text.length) {
+      ++i
+      continue
+    }
+    if (ch === '"') {
+      inQuote = !inQuote
+      continue
+    }
+    if (ch === '%' && !inQuote) {
+      ++count
+    }
+  }
+  return count
+}
+
 function countPercentSigns(tokens: FormatToken[]): number {
   return tokens
     .filter((token) => token.type === TokenType.FREE_TEXT)
-    .reduce((count, token) => count + countChars(token.value, '%'), 0)
+    .reduce((count, token) => count + countActivePercent(token.value), 0)
 }
 
 /* Excel rounds halves away from zero (2.5 -> 3, -2.5 -> -3), unlike JS toFixed which rounds
@@ -129,7 +170,15 @@ function roundHalfAwayFromZero(value: number, decimals: number): number {
     return value
   }
   const sign = value < 0 ? -1 : 1
-  const shifted = Math.round(Number(`${Math.abs(value)}e${decimals}`))
+  const abs = Math.abs(value)
+  /* Magnitudes below ~1e-6 stringify in exponent form (e.g. "1e-7"), which would corrupt the
+   * decimal-shift string into "1e-7e2" -> NaN. At that scale a plain numeric shift carries no
+   * half-rounding risk (no representable half lands on a boundary), so use it directly. */
+  if (abs.toString().includes('e')) {
+    const factor = 10 ** decimals
+    return sign * Math.round(abs * factor) / factor
+  }
+  const shifted = Math.round(Number(`${abs}e${decimals}`))
   return sign * Number(`${shifted}e${-decimals}`)
 }
 
@@ -153,7 +202,7 @@ function numberFormat(tokens: FormatToken[], value: number): RawScalarValue {
   for (let i = 0; i < tokens.length; ++i) {
     const token = tokens[i]
     if (token.type === TokenType.FREE_TEXT) {
-      result += token.value
+      result += renderFormatLiteral(token.value)
       continue
     }
 
