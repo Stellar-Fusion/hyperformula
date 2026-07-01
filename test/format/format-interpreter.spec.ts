@@ -27,6 +27,17 @@ describe('FormatInterpreter', () => {
     expect(format(0, '0;;', config, dateHelper)).toEqual('')
   })
 
+  it('treats escaped/quoted percent as a display literal (no scaling), but scales a real percent token', () => {
+    expect(format(3, '0\\%', config, dateHelper)).toEqual('3%')
+    expect(format(0.5, '0.0"%"', config, dateHelper)).toEqual('0.5%')
+    expect(format(0.05, '0%', config, dateHelper)).toEqual('5%')
+  })
+
+  it('rounds tiny (exponent-notation) magnitudes without producing NaN', () => {
+    expect(format(0.0000001, '0.00', config, dateHelper)).toEqual('0.00')
+    expect(format(-0.0000001, '0.00', config, dateHelper)).toEqual('0.00')
+  })
+
   it('works with # without decimal separator', () => {
     expect(format(1, '###', config, dateHelper)).toEqual('1')
     expect(format(12, '###', config, dateHelper)).toEqual('12')
