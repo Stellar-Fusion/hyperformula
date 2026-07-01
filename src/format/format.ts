@@ -42,12 +42,14 @@ function splitFormatSections(formatArg: string): string[] {
 
 /* Pick the section matching the value's sign (Excel rules): positive -> [0]; negative -> [1]
  * formatted with the absolute value (the section supplies its own sign/parens); zero -> [2].
- * Missing negative/zero sections fall back to [0] (where a negative value keeps its `-`). */
+ * An ABSENT (undefined) negative/zero section falls back to [0] (a negative value keeps its `-`);
+ * an EXPLICITLY EMPTY section (e.g. `0;;`) is a valid Excel instruction to display nothing for that
+ * sign, so it is returned as-is and renders as an empty string. */
 function selectNumberFormatSection(sections: string[], value: number): { sectionFormat: string, sectionValue: number } {
-  if (value < 0 && sections[1] !== undefined && sections[1] !== '') {
+  if (value < 0 && sections[1] !== undefined) {
     return {sectionFormat: sections[1], sectionValue: Math.abs(value)}
   }
-  if (value === 0 && sections[2] !== undefined && sections[2] !== '') {
+  if (value === 0 && sections[2] !== undefined) {
     return {sectionFormat: sections[2], sectionValue: value}
   }
   return {sectionFormat: sections[0], sectionValue: value}
