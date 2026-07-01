@@ -59,4 +59,36 @@ describe('Parsing error literals', () => {
     expect(errors[0].type).toBe(ParsingErrorType.ParserError)
     expect(errors[0].message).toBe('Unknown error literal')
   })
+
+  it('should parse a sheet-qualified reference error (Excel writes Sheet!#REF! when a cross-sheet reference is deleted)', () => {
+    const parser = buildEmptyParserWithCaching(new Config())
+    const ast = parser.parse('=Income!#REF!', adr('A1')).ast as ErrorAst
+    expect(ast.type).toBe(AstNodeType.ERROR)
+    expect(ast.error.type).toEqual(ErrorType.REF)
+  })
+
+  it('should parse a quoted sheet-qualified reference error', () => {
+    const parser = buildEmptyParserWithCaching(new Config())
+    const ast = parser.parse("='Income Statement'!#REF!", adr('A1')).ast as ErrorAst
+    expect(ast.type).toBe(AstNodeType.ERROR)
+    expect(ast.error.type).toEqual(ErrorType.REF)
+  })
+})
+
+describe('Evaluating sheet-qualified error literals', () => {
+  it('ISNUMBER traps a sheet-qualified #REF! as FALSE, matching Excel', () => {
+    const hf = HyperFormula.buildFromSheets(
+      {Income: [[1]], Stats: [['=ISNUMBER(Income!#REF!)']]},
+      {licenseKey: 'gpl-v3'},
+    )
+    expect(hf.getCellValue(adr('A1', 1))).toBe(false)
+  })
+
+  it('a defensive IF(ISNUMBER(Sheet!#REF!), Sheet!#REF!, "") resolves to empty string, not a parse error', () => {
+    const hf = HyperFormula.buildFromSheets(
+      {Income: [[1]], Stats: [['=IF(ISNUMBER(Income!#REF!), Income!#REF!, "")']]},
+      {licenseKey: 'gpl-v3'},
+    )
+    expect(hf.getCellValue(adr('A1', 1))).toBe('')
+  })
 })
