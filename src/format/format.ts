@@ -10,6 +10,12 @@ import {RawScalarValue} from '../interpreter/InterpreterValue'
 import {Maybe} from '../Maybe'
 import {FormatToken, parseForDateTimeFormat, parseForNumberFormat, TokenType} from './parser'
 
+/* Excel month-name tokens: mmm -> abbreviated, mmmm -> full, mmmmm -> single letter.
+ * ponytail: en-US names only (the Excel default). Wire these to the locale if non-English
+ * month names are ever needed. */
+const SHORT_MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const FULL_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
 /* Excel number formats may carry up to four `;`-separated sections: positive;negative;zero;text.
  * Split at the top level only — a `;` inside a quoted literal ("...") or escaped (\;) is literal
  * text, not a separator. ponytail: the 4th (text) section is irrelevant for numeric values. */
@@ -346,6 +352,20 @@ export function defaultStringifyDateTime(dateTime: SimpleDateTime, formatArg: st
           result += padLeft(dateTime.month, token.value.length)
         }
         minutes = true
+        break
+      }
+
+      /* month names (always a month, never minutes) */
+      case 'mmm': {
+        result += SHORT_MONTH_NAMES[dateTime.month - 1] ?? ''
+        break
+      }
+      case 'mmmm': {
+        result += FULL_MONTH_NAMES[dateTime.month - 1] ?? ''
+        break
+      }
+      case 'mmmmm': {
+        result += FULL_MONTH_NAMES[dateTime.month - 1]?.charAt(0) ?? ''
         break
       }
 

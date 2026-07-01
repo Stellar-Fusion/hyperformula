@@ -16,6 +16,15 @@ describe('TEXT()', () => {
     expect(engine.getCellValue(adr('B1'))).toEqual('01/01/1900')
   })
 
+  it('renders a full month name (mmmm), not a month+minute pair', () => {
+    const engine = HyperFormula.buildFromArray([[
+      '=DATE(2025,7,8)',
+      '=TEXT(A1, "mmmm d, yyyy")',
+    ]])
+
+    expect(engine.getCellValue(adr('B1'))).toEqual('July 8, 2025')
+  })
+
   it('formats a fraction as a percentage', () => {
     const engine = HyperFormula.buildFromArray([
       [0.032, '=TEXT(A1, "0.0%")'],
