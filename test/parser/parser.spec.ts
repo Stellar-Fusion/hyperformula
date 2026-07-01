@@ -396,6 +396,26 @@ describe('cell references and ranges', () => {
     expect(ast.reference.sheet).toBe(1)
   })
 
+  it('parses an unquoted sheet name containing a dot (Excel writes dotted sheet names unquoted)', () => {
+    const sheetMapping = new SheetMapping(buildTranslationPackage(enGB))
+    sheetMapping.addSheet('Sheet1')
+    sheetMapping.addSheet('OtherAffi.')
+    const parser = buildEmptyParserWithCaching(new Config(), sheetMapping)
+
+    const ast = parser.parse('=OtherAffi.!A1', adr('A1')).ast as CellReferenceAst
+    expect(ast.type).toBe(AstNodeType.CELL_REFERENCE)
+    expect(ast.reference.sheet).toBe(1)
+  })
+
+  it('sums across a sheet whose unquoted name contains a dot', () => {
+    const engine = HyperFormula.buildFromSheets({
+      'OtherAffi.': [[5]],
+      Summary: [['=OtherAffi.!A1+3']],
+    }, {licenseKey: 'gpl-v3'})
+
+    expect(engine.getCellValue(adr('A1', 1))).toEqual(8)
+  })
+
   it('sheet name is case insensitive', () => {
     const sheetMapping = new SheetMapping(buildTranslationPackage(enGB))
     sheetMapping.addSheet('Sheet1')
