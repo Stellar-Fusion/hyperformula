@@ -6,6 +6,7 @@
 import {AbsoluteCellRange} from '../AbsoluteCellRange'
 import {CellError, simpleCellAddress} from '../Cell'
 import {DependencyGraph} from '../DependencyGraph'
+import {forceNormalizeString} from './ArithmeticHelper'
 import {EmptyValue, getRawValue, RawInterpreterValue, RawNoErrorScalarValue} from './InterpreterValue'
 
 const NOT_FOUND = -1
@@ -20,7 +21,10 @@ const NOT_FOUND = -1
  *
  * If the search range contains duplicates, returns the last matching value. If no value found in the range satisfies the above, returns -1.
  *
- * Note: this function does not normalize input strings.
+ * The caller passes an already-normalized searchKey, so range string values are normalized the same
+ * way before comparison. Without this the ordering comparison mixes a lowercased key (e.g. "q3") with
+ * raw range values ("Q1".."Q4"), and since lowercase sorts after uppercase every element reads as
+ * <= key, so the search returns the last index instead of the real match.
  */
 export function findLastOccurrenceInOrderedRange(
   searchKey: RawNoErrorScalarValue,
@@ -31,9 +35,11 @@ export function findLastOccurrenceInOrderedRange(
   const start = range.start[searchCoordinate]
   const end = searchCoordinate === 'col' ? range.effectiveEndColumn(dependencyGraph) : range.effectiveEndRow(dependencyGraph)
 
+  const normalizeValue = (value: RawInterpreterValue): RawInterpreterValue =>
+    typeof value === 'string' ? forceNormalizeString(value) : value
   const getValueFromIndexFn = searchCoordinate === 'col'
-    ? (index: number) => getRawValue(dependencyGraph.getCellValue(simpleCellAddress(range.sheet, index, range.start.row)))
-    : (index: number) => getRawValue(dependencyGraph.getCellValue(simpleCellAddress(range.sheet, range.start.col, index)))
+    ? (index: number) => normalizeValue(getRawValue(dependencyGraph.getCellValue(simpleCellAddress(range.sheet, index, range.start.row))))
+    : (index: number) => normalizeValue(getRawValue(dependencyGraph.getCellValue(simpleCellAddress(range.sheet, range.start.col, index))))
 
   const compareFn = orderingDirection === 'asc'
     ? (left: RawNoErrorScalarValue, right: RawInterpreterValue) => compare(left, right)
