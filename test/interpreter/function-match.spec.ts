@@ -289,6 +289,42 @@ describe('Function MATCH', () => {
         expect(engine.getCellValue(adr('A1'))).toEqual(4)
       })
 
+      it('returns the exact match for a sorted text range', () => {
+        const engine = HyperFormula.buildFromArray([
+          ['=MATCH("Q3", A2:A5, 1)'],
+          ['Q1'],
+          ['Q2'],
+          ['Q3'],
+          ['Q4'],
+        ])
+
+        expect(engine.getCellValue(adr('A1'))).toEqual(3)
+      })
+
+      it('matches a sorted text range case-insensitively', () => {
+        const engine = HyperFormula.buildFromArray([
+          ['=MATCH("q3", A2:A5, 1)'],
+          ['Q1'],
+          ['Q2'],
+          ['Q3'],
+          ['Q4'],
+        ])
+
+        expect(engine.getCellValue(adr('A1'))).toEqual(3)
+      })
+
+      it('returns the lower bound for a sorted text range with no exact match', () => {
+        const engine = HyperFormula.buildFromArray([
+          ['=MATCH("Q3", A2:A5, 1)'],
+          ['Q1'],
+          ['Q2'],
+          ['Q4'],
+          ['Q5'],
+        ])
+
+        expect(engine.getCellValue(adr('A1'))).toEqual(2)
+      })
+
       it('returns the last value if all are smaller than the search value', () => {
         const engine = HyperFormula.buildFromArray([
           ['=MATCH(1000, A2:A5, 1)'],
