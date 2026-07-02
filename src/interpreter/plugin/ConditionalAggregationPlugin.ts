@@ -108,6 +108,15 @@ export class ConditionalAggregationPlugin extends FunctionPlugin implements Func
       ],
       repeatLastArgs: 2,
     },
+    AVERAGEIFS: {
+      method: 'averageifs',
+      parameters: [
+        {argumentType: FunctionArgumentType.RANGE},
+        {argumentType: FunctionArgumentType.RANGE},
+        {argumentType: FunctionArgumentType.NOERROR},
+      ],
+      repeatLastArgs: 2,
+    },
     COUNTIFS: {
       method: 'countifs',
       parameters: [
@@ -196,6 +205,29 @@ export class ConditionalAggregationPlugin extends FunctionPlugin implements Func
         (left, right) => left.compose(right),
         (arg) => isExtendedNumber(arg) ? AverageResult.single(getRawValue(arg)) : AverageResult.empty,
         )
+
+      if (averageResult instanceof CellError) {
+        return averageResult
+      } else {
+        return averageResult.averageValue() ?? new CellError(ErrorType.DIV_BY_ZERO)
+      }
+    }
+
+    return this.runFunction(ast.args, state, this.metadata(functionName), computeFn)
+  }
+
+  public averageifs(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    const functionName = 'AVERAGEIFS'
+
+    const computeFn = (values: SimpleRangeValue, ...args: unknown[]) => {
+      const averageResult = this.computeConditionalAggregationFunction<AverageResult>(
+        values,
+        args as RawInterpreterValue[],
+        functionName,
+        AverageResult.empty,
+        (left, right) => left.compose(right),
+        (arg) => isExtendedNumber(arg) ? AverageResult.single(getRawValue(arg)) : AverageResult.empty,
+      )
 
       if (averageResult instanceof CellError) {
         return averageResult
