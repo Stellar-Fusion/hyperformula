@@ -751,11 +751,6 @@ export class FormulaParser extends EmbeddedActionsParser {
   }
 
   /**
-   * Returns {@link CellReferenceAst} or {@link CellRangeAst} based on OFFSET function arguments
-   *
-   * @param {Ast[]} args - OFFSET function arguments
-   */
-  /**
    * Resolves an OFFSET shift/size argument to a static integer at parse time. Accepts a number literal,
    * a unary +/- number, and COLUMNS/ROWS of a literal range (both are compile-time constants — the width
    * / height of a fixed range). Returns null when the argument is not statically resolvable.
@@ -785,6 +780,11 @@ export class FormulaParser extends EmbeddedActionsParser {
     return null
   }
 
+  /**
+   * Returns {@link CellReferenceAst} or {@link CellRangeAst} based on OFFSET function arguments
+   *
+   * @param {Ast[]} args - OFFSET function arguments
+   */
   private handleOffsetHeuristic(args: Ast[]): Ast {
     // Excel's OFFSET accepts either a single cell or a range as its base. For a range, offsets apply to
     // its top-left corner and omitted height/width default to the range's own dimensions (not 1).
