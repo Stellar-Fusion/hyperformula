@@ -755,78 +755,100 @@ export class FormulaParser extends EmbeddedActionsParser {
    *
    * @param {Ast[]} args - OFFSET function arguments
    */
+  /**
+   * Resolves an OFFSET shift/size argument to a static integer at parse time. Accepts a number literal,
+   * a unary +/- number, and COLUMNS/ROWS of a literal range (both are compile-time constants — the width
+   * / height of a fixed range). Returns null when the argument is not statically resolvable.
+   */
+  private static staticIntegerArg(arg: Ast | undefined): number | null {
+    if (arg === undefined) {
+      return null
+    }
+    if (arg.type === AstNodeType.NUMBER) {
+      return Number.isInteger(arg.value) ? arg.value : null
+    }
+    if (arg.type === AstNodeType.PLUS_UNARY_OP && arg.value.type === AstNodeType.NUMBER && Number.isInteger(arg.value.value)) {
+      return arg.value.value
+    }
+    if (arg.type === AstNodeType.MINUS_UNARY_OP && arg.value.type === AstNodeType.NUMBER && Number.isInteger(arg.value.value)) {
+      return -arg.value.value
+    }
+    if (arg.type === AstNodeType.FUNCTION_CALL && arg.args.length === 1 && arg.args[0].type === AstNodeType.CELL_RANGE) {
+      const range = arg.args[0]
+      if (arg.procedureName === 'COLUMNS') {
+        return range.end.col - range.start.col + 1
+      }
+      if (arg.procedureName === 'ROWS') {
+        return range.end.row - range.start.row + 1
+      }
+    }
+    return null
+  }
+
   private handleOffsetHeuristic(args: Ast[]): Ast {
+    // Excel's OFFSET accepts either a single cell or a range as its base. For a range, offsets apply to
+    // its top-left corner and omitted height/width default to the range's own dimensions (not 1).
     const cellArg = args[0]
-    if (cellArg.type !== AstNodeType.CELL_REFERENCE) {
+    let baseReference: CellAddress
+    let sourceHeight = 1
+    let sourceWidth = 1
+    if (cellArg.type === AstNodeType.CELL_REFERENCE) {
+      baseReference = cellArg.reference
+    } else if (cellArg.type === AstNodeType.CELL_RANGE) {
+      baseReference = cellArg.start
+      sourceHeight = cellArg.end.row - cellArg.start.row + 1
+      sourceWidth = cellArg.end.col - cellArg.start.col + 1
+    } else {
       return this.parsingError(ParsingErrorType.StaticOffsetError, 'First argument to OFFSET is not a reference')
     }
-    const rowsArg = args[1]
-    let rowShift
-    if (rowsArg.type === AstNodeType.NUMBER && Number.isInteger(rowsArg.value)) {
-      rowShift = rowsArg.value
-    } else if (rowsArg.type === AstNodeType.PLUS_UNARY_OP && rowsArg.value.type === AstNodeType.NUMBER && Number.isInteger(rowsArg.value.value)) {
-      rowShift = rowsArg.value.value
-    } else if (rowsArg.type === AstNodeType.MINUS_UNARY_OP && rowsArg.value.type === AstNodeType.NUMBER && Number.isInteger(rowsArg.value.value)) {
-      rowShift = -rowsArg.value.value
-    } else {
+
+    const rowShift = FormulaParser.staticIntegerArg(args[1])
+    if (rowShift === null) {
       return this.parsingError(ParsingErrorType.StaticOffsetError, 'Second argument to OFFSET is not a static number')
     }
-    const columnsArg = args[2]
-    let colShift
-    if (columnsArg.type === AstNodeType.NUMBER && Number.isInteger(columnsArg.value)) {
-      colShift = columnsArg.value
-    } else if (columnsArg.type === AstNodeType.PLUS_UNARY_OP && columnsArg.value.type === AstNodeType.NUMBER && Number.isInteger(columnsArg.value.value)) {
-      colShift = columnsArg.value.value
-    } else if (columnsArg.type === AstNodeType.MINUS_UNARY_OP && columnsArg.value.type === AstNodeType.NUMBER && Number.isInteger(columnsArg.value.value)) {
-      colShift = -columnsArg.value.value
-    } else {
+    const colShift = FormulaParser.staticIntegerArg(args[2])
+    if (colShift === null) {
       return this.parsingError(ParsingErrorType.StaticOffsetError, 'Third argument to OFFSET is not a static number')
     }
+
     const heightArg = args[3]
-    let height
-    if (heightArg === undefined) {
-      height = 1
-    } else if (heightArg.type === AstNodeType.NUMBER) {
-      height = heightArg.value
-      if (height < 1) {
-        return this.parsingError(ParsingErrorType.StaticOffsetError, 'Fourth argument to OFFSET is too small number')
-      } else if (!Number.isInteger(height)) {
-        return this.parsingError(ParsingErrorType.StaticOffsetError, 'Fourth argument to OFFSET is not integer')
-      }
-    } else {
+    if (heightArg !== undefined && heightArg.type === AstNodeType.NUMBER && !Number.isInteger(heightArg.value)) {
+      return this.parsingError(ParsingErrorType.StaticOffsetError, 'Fourth argument to OFFSET is not integer')
+    }
+    const height = heightArg === undefined ? sourceHeight : FormulaParser.staticIntegerArg(heightArg)
+    if (height === null) {
       return this.parsingError(ParsingErrorType.StaticOffsetError, 'Fourth argument to OFFSET is not a static number')
     }
+    if (height < 1) {
+      return this.parsingError(ParsingErrorType.StaticOffsetError, 'Fourth argument to OFFSET is too small number')
+    }
     const widthArg = args[4]
-    let width
-    if (widthArg === undefined) {
-      width = 1
-    } else if (widthArg.type === AstNodeType.NUMBER) {
-      width = widthArg.value
-      if (width < 1) {
-        return this.parsingError(ParsingErrorType.StaticOffsetError, 'Fifth argument to OFFSET is too small number')
-      } else if (!Number.isInteger(width)) {
-        return this.parsingError(ParsingErrorType.StaticOffsetError, 'Fifth argument to OFFSET is not integer')
-      }
-    } else {
+    if (widthArg !== undefined && widthArg.type === AstNodeType.NUMBER && !Number.isInteger(widthArg.value)) {
+      return this.parsingError(ParsingErrorType.StaticOffsetError, 'Fifth argument to OFFSET is not integer')
+    }
+    const width = widthArg === undefined ? sourceWidth : FormulaParser.staticIntegerArg(widthArg)
+    if (width === null) {
       return this.parsingError(ParsingErrorType.StaticOffsetError, 'Fifth argument to OFFSET is not a static number')
+    }
+    if (width < 1) {
+      return this.parsingError(ParsingErrorType.StaticOffsetError, 'Fifth argument to OFFSET is too small number')
     }
 
     const topLeftCorner = new CellAddress(
-      cellArg.reference.col + colShift,
-      cellArg.reference.row + rowShift,
-      cellArg.reference.type,
+      baseReference.col + colShift,
+      baseReference.row + rowShift,
+      baseReference.type,
     )
 
     let absoluteCol = topLeftCorner.col
     let absoluteRow = topLeftCorner.row
 
-    if (cellArg.reference.type === CellReferenceType.CELL_REFERENCE_RELATIVE
-      || cellArg.reference.type === CellReferenceType.CELL_REFERENCE_ABSOLUTE_COL) {
+    if (baseReference.type === CellReferenceType.CELL_REFERENCE_RELATIVE
+      || baseReference.type === CellReferenceType.CELL_REFERENCE_ABSOLUTE_COL) {
       absoluteRow = absoluteRow + this.formulaAddress.row
     }
-    if (cellArg.reference.type === CellReferenceType.CELL_REFERENCE_RELATIVE
-      || cellArg.reference.type === CellReferenceType.CELL_REFERENCE_ABSOLUTE_ROW) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    if (baseReference.type === CellReferenceType.CELL_REFERENCE_RELATIVE
+      || baseReference.type === CellReferenceType.CELL_REFERENCE_ABSOLUTE_ROW) {
       absoluteCol = absoluteCol + this.formulaAddress.col
     }
 
