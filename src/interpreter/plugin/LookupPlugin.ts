@@ -63,6 +63,19 @@ export class LookupPlugin extends FunctionPlugin implements FunctionPluginTypech
         { argumentType: FunctionArgumentType.NUMBER, defaultValue: 1 },
       ]
     },
+    'XMATCH': {
+      method: 'xmatch',
+      parameters: [
+        // lookup_value
+        { argumentType: FunctionArgumentType.NOERROR },
+        // lookup_array
+        { argumentType: FunctionArgumentType.RANGE },
+        // [match_mode]: 0 exact (default), -1 exact-or-next-smaller, 1 exact-or-next-larger, 2 wildcard
+        { argumentType: FunctionArgumentType.NUMBER, optionalArg: true, defaultValue: 0 },
+        // [search_mode]: 1 first-to-last (default), -1 last-to-first, 2 binary-asc, -2 binary-desc
+        { argumentType: FunctionArgumentType.NUMBER, optionalArg: true, defaultValue: 1 },
+      ]
+    },
   }
   private rowSearch: RowSearchStrategy = new RowSearchStrategy(this.dependencyGraph)
 
@@ -194,6 +207,32 @@ export class LookupPlugin extends FunctionPlugin implements FunctionPluginTypech
   public match(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
     return this.runFunction(ast.args, state, this.metadata('MATCH'), (key: RawNoErrorScalarValue, rangeValue: SimpleRangeValue, type: number) => {
       return this.doMatch(zeroIfEmpty(key), rangeValue, type)
+    })
+  }
+
+  public xmatch(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('XMATCH'), (key: RawNoErrorScalarValue, rangeValue: SimpleRangeValue, matchMode: number, searchMode: number) => {
+      if (![0, -1, 1, 2].includes(matchMode)) {
+        return new CellError(ErrorType.VALUE, ErrorMessage.BadMode)
+      }
+      if (![1, -1, 2, -2].includes(searchMode)) {
+        return new CellError(ErrorType.VALUE, ErrorMessage.BadMode)
+      }
+      if (rangeValue.width() > 1 && rangeValue.height() > 1) {
+        return new CellError(ErrorType.NA)
+      }
+      const isWildcardMatchMode = matchMode === 2
+      const searchStrategy = rangeValue.width() === 1 ? this.columnSearch : this.rowSearch
+      const searchOptions: SearchOptions = {
+        ordering: searchMode === 2 ? 'asc' : searchMode === -2 ? 'desc' : 'none',
+        returnOccurrence: searchMode === -1 ? 'last' : 'first',
+        ifNoMatch: matchMode === -1 ? 'returnLowerBound' : matchMode === 1 ? 'returnUpperBound' : 'returnNotFound',
+      }
+      const index = this.searchInRange(zeroIfEmpty(key), rangeValue, isWildcardMatchMode, searchOptions, searchStrategy)
+      if (index === -1) {
+        return new CellError(ErrorType.NA, ErrorMessage.ValueNotFound)
+      }
+      return index + 1
     })
   }
 

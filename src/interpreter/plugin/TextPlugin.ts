@@ -23,6 +23,24 @@ export class TextPlugin extends FunctionPlugin implements FunctionPluginTypechec
       repeatLastArgs: 1,
       expandRanges: true,
     },
+    'CONCAT': {
+      method: 'concat',
+      parameters: [
+        {argumentType: FunctionArgumentType.STRING}
+      ],
+      repeatLastArgs: 1,
+      expandRanges: true,
+    },
+    'TEXTJOIN': {
+      method: 'textjoin',
+      parameters: [
+        {argumentType: FunctionArgumentType.STRING},
+        {argumentType: FunctionArgumentType.BOOLEAN},
+        {argumentType: FunctionArgumentType.STRING}
+      ],
+      repeatLastArgs: 1,
+      expandRanges: true,
+    },
     'EXACT': {
       method: 'exact',
       parameters: [
@@ -155,6 +173,27 @@ export class TextPlugin extends FunctionPlugin implements FunctionPluginTypechec
   public concatenate(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
     return this.runFunction(ast.args, state, this.metadata('CONCATENATE'), (...args) => {
       return ''.concat(...args)
+    })
+  }
+
+  /**
+   * Corresponds to CONCAT(value1, [value2, ...]) — the modern replacement for CONCATENATE.
+   * Concatenates all arguments (ranges are expanded) into one string.
+   */
+  public concat(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('CONCAT'), (...args) => {
+      return ''.concat(...args)
+    })
+  }
+
+  /**
+   * Corresponds to TEXTJOIN(delimiter, ignore_empty, text1, [text2, ...]).
+   * Joins the text arguments with `delimiter`; when `ignore_empty` is true, empty strings are skipped.
+   */
+  public textjoin(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('TEXTJOIN'), (delimiter: string, ignoreEmpty: boolean, ...args: string[]) => {
+      const parts = ignoreEmpty ? args.filter(arg => arg !== '') : args
+      return parts.join(delimiter)
     })
   }
 
