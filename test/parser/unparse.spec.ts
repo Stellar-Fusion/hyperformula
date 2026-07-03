@@ -81,8 +81,8 @@ describe('Unparse', () => {
     expect(unparsed).toEqual(formula)
   })
 
-  it('#unparse cell ref in string with escape', () => {
-    const formula = '="fdsaf\\"A5"'
+  it('#unparse a string containing an escaped (doubled) double-quote', () => {
+    const formula = '="fdsaf""A5"'
     const ast = parser.parse(formula, adr('A1')).ast
     const unparsed = unparser.unparse(ast, adr('A1'))
 

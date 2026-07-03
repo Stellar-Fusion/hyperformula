@@ -68,6 +68,14 @@ describe('ParserWithCaching', () => {
     expect(ast.value).toBe('foobar')
   })
 
+  it('string literal with an escaped (doubled) double-quote', () => {
+    const parser = buildEmptyParserWithCaching(new Config())
+
+    const ast = parser.parse('="a""b"', adr('A1')).ast as StringAst
+    expect(ast.type).toBe(AstNodeType.STRING)
+    expect(ast.value).toBe('a"b')
+  })
+
   it('plus operator on different nodes', () => {
     const parser = buildEmptyParserWithCaching(new Config())
 

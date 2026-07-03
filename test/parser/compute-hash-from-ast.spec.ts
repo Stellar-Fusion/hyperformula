@@ -132,8 +132,8 @@ describe('Compute hash from ast', () => {
     expectHashFromAstMatchHashFromTokens(formula)
   })
 
-  it('cell ref in string with escape', () => {
-    const formula = '="fdsaf\\"A5"'
+  it('string containing an escaped (doubled) double-quote', () => {
+    const formula = '="fdsaf""A5"'
     expectHashFromAstMatchHashFromTokens(formula)
   })
 

@@ -147,7 +147,7 @@ export interface StringAst extends AstWithWhitespace {
 
 export const buildStringAst = (token: ExtendedToken): StringAst => ({
   type: AstNodeType.STRING,
-  value: token.image.slice(1, -1),
+  value: token.image.slice(1, -1).replace(/""/g, '"'),
   leadingWhitespace: token.leadingWhitespace?.image,
 })
 
