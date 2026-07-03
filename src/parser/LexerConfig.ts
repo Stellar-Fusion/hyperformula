@@ -42,7 +42,7 @@ export const ArrayLParen = createToken({name: 'ArrayLParen', pattern: /{/})
 export const ArrayRParen = createToken({name: 'ArrayRParen', pattern: /}/})
 
 // Excel escapes a double-quote inside a string literal by doubling it ("a""b" is the value a"b), so the
-// token allows "" between the delimiters; buildStringAst collapses each "" back to a single quote.
+// token allows "" between the delimiters; buildStringAst collapses each "" back to a single double-quote.
 export const StringLiteral = createToken({name: 'StringLiteral', pattern: /"([^"]*(""[^"]*)*)"/})
 export const ErrorLiteral = createToken({name: 'ErrorLiteral', pattern: new RegExp(`(${SHEET_NAME_PATTERN})?#[A-Za-z0-9\\/]+[?!]?`)})
 
