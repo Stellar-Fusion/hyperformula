@@ -42,7 +42,7 @@ export class Unparser {
         return imageWithWhitespace(formatNumber(ast.value, this.config.decimalSeparator), ast.leadingWhitespace)
       }
       case AstNodeType.STRING: {
-        return imageWithWhitespace('"' + ast.value + '"', ast.leadingWhitespace)
+        return imageWithWhitespace('"' + ast.value.replace(/"/g, '""') + '"', ast.leadingWhitespace)
       }
       case AstNodeType.FUNCTION_CALL: {
         const args = ast.args.map((arg) => arg !== undefined ? this.unparseAst(arg, address) : ''

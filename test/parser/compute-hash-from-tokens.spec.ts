@@ -71,10 +71,10 @@ describe('computeHashFromTokens', () => {
     expect(computeFunc(code, adr('B2'))).toEqual('="A5"+#2R-1+"A6"')
   })
 
-  it('cell ref in string with escape', () => {
-    const code = '="fdsaf\\"A5"'
+  it('string containing an escaped (doubled) double-quote', () => {
+    const code = '="fdsaf""A5"'
 
-    expect(computeFunc(code, adr('B2'))).toEqual('="fdsaf\\"A5"')
+    expect(computeFunc(code, adr('B2'))).toEqual('="fdsaf""A5"')
   })
 
   it('cell ref to not exsiting sheet', () => {
