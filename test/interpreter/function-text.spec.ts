@@ -47,6 +47,24 @@ describe('TEXT()', () => {
     expect(engine.getCellValue(adr('B3'))).toEqual('0%')
   })
 
+  it('returns non-numeric text unchanged (Excel passthrough)', () => {
+    const engine = HyperFormula.buildFromArray([
+      ['=TEXT("December", "mmmm")'],
+      ['="Fiscal Years ending "&TEXT("December", "mmmm")&","'],
+    ])
+
+    expect(engine.getCellValue(adr('A1'))).toEqual('December')
+    expect(engine.getCellValue(adr('A2'))).toEqual('Fiscal Years ending December,')
+  })
+
+  it('still formats numeric text as a number', () => {
+    const engine = HyperFormula.buildFromArray([
+      ['=TEXT("5", "0.00")'],
+    ])
+
+    expect(engine.getCellValue(adr('A1'))).toEqual('5.00')
+  })
+
   it('wrong number of arguments', () => {
     const engine = HyperFormula.buildFromArray([
       ['=TEXT(42)'],

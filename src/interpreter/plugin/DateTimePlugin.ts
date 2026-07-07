@@ -16,6 +16,7 @@ import {
   truncateDayInMonth
 } from '../../DateTimeHelper'
 import {ErrorMessage} from '../../error-message'
+import {coerceScalarToString} from '../ArithmeticHelper'
 import {format} from '../../format/format'
 import {Maybe} from '../../Maybe'
 import {ProcedureAst} from '../../parser'
@@ -89,7 +90,7 @@ export class DateTimePlugin extends FunctionPlugin implements FunctionPluginType
     'TEXT': {
       method: 'text',
       parameters: [
-        {argumentType: FunctionArgumentType.NUMBER},
+        {argumentType: FunctionArgumentType.SCALAR},
         {argumentType: FunctionArgumentType.STRING},
       ]
     },
@@ -360,7 +361,17 @@ export class DateTimePlugin extends FunctionPlugin implements FunctionPluginType
    */
   public text(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
     return this.runFunction(ast.args, state, this.metadata('TEXT'),
-      (numberRepresentation, formatArg) => format(numberRepresentation, formatArg, this.config, this.dateTimeHelper)
+      (value, formatArg) => {
+        if (value instanceof CellError) {
+          return value
+        }
+        const coerced = this.coerceScalarToNumberOrError(value)
+        if (coerced instanceof CellError) {
+          // Excel returns non-numeric text unchanged: TEXT("December", "mmmm") -> "December"
+          return coerceScalarToString(value)
+        }
+        return format(getRawValue(coerced), formatArg, this.config, this.dateTimeHelper)
+      }
     )
   }
 
