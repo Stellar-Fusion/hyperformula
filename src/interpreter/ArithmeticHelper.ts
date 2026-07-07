@@ -3,7 +3,7 @@
  * Copyright (c) 2025 Handsoncode. All rights reserved.
  */
 
-import {CellError, CellValueTypeOrd, ErrorType, getCellValueType, SimpleCellAddress} from '../Cell'
+import {CellError, CellValueTypeOrd, ErrorType, getCellValueType} from '../Cell'
 import {Config} from '../Config'
 import {DateTimeHelper} from '../DateTimeHelper'
 import {ErrorMessage} from '../error-message'
@@ -810,36 +810,11 @@ export function forceNormalizeString(str: string): string {
   return normalizeString(str.toLowerCase(), 'nfd').replace(/[\u0300-\u036f]/g, '')
 }
 
-/**
- * Excel implicit intersection of a range against a formula's position: a single-column range picks the
- * cell in the formula's row, a single-row range the cell in the formula's column. Matched by absolute
- * row/column index, so it works cross-sheet. Returns undefined for a 2-D range or when the formula falls
- * outside the range's span (the caller turns that into #VALUE!).
- */
-export function rangeIntersectionAtAddress(arg: SimpleRangeValue, formulaAddress: SimpleCellAddress): Maybe<InternalScalarValue> {
-  if (arg.isAdHoc()) {
-    return arg.data[0]?.[0]
-  }
-  const range = arg.range!
-  if (range.width() === 1) {
-    const offset = formulaAddress.row - range.start.row
-    if (offset >= 0 && offset < range.height()) {
-      return arg.data[offset][0]
-    }
-  } else if (range.height() === 1) {
-    const offset = formulaAddress.col - range.start.col
-    if (offset >= 0 && offset < range.width()) {
-      return arg.data[0][offset]
-    }
-  }
-  return undefined
-}
-
 export function coerceRangeToScalar(arg: SimpleRangeValue, state: InterpreterState): Maybe<InternalScalarValue> {
   if (!arg.isAdHoc() && state.formulaAddress.sheet !== arg.range!.sheet) {
     return undefined
   }
-  return rangeIntersectionAtAddress(arg, state.formulaAddress)
+  return arg.scalarAtAddress(state.formulaAddress)
 }
 
 type NormalizationForm = 'nfc' | 'nfd' | 'nfkc' | 'nfkd'

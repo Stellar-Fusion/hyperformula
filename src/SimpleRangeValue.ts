@@ -9,6 +9,7 @@ import {CellError, ErrorType, simpleCellAddress, SimpleCellAddress} from './Cell
 import {DependencyGraph} from './DependencyGraph'
 import {ErrorMessage} from './error-message'
 import {InternalScalarValue, isExtendedNumber} from './interpreter/InterpreterValue'
+import {Maybe} from './Maybe'
 
 /**
  * A class that represents a range of data.
@@ -87,6 +88,32 @@ export class SimpleRangeValue {
    */
   public isAdHoc(): boolean {
     return this.range === undefined
+  }
+
+  /**
+   * Excel implicit intersection: the single value a range collapses to when read from a formula at
+   * `formulaAddress`. A single-column range picks the cell in the formula's row, a single-row range the
+   * cell in the formula's column (matched by absolute index, so it works cross-sheet). An ad-hoc range
+   * (no address) yields its top-left cell. Returns `undefined` for an addressed 2-D range or when the
+   * formula falls outside the range's span — the caller turns that into #VALUE!.
+   */
+  public scalarAtAddress(formulaAddress: SimpleCellAddress): Maybe<InternalScalarValue> {
+    if (this.isAdHoc()) {
+      return this.data[0]?.[0]
+    }
+    const range = this.range!
+    if (range.width() === 1) {
+      const offset = formulaAddress.row - range.start.row
+      if (offset >= 0 && offset < range.height()) {
+        return this.data[offset][0]
+      }
+    } else if (range.height() === 1) {
+      const offset = formulaAddress.col - range.start.col
+      if (offset >= 0 && offset < range.width()) {
+        return this.data[0][offset]
+      }
+    }
+    return undefined
   }
 
   /**
