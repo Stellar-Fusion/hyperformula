@@ -160,6 +160,12 @@ export class TextPlugin extends FunctionPlugin implements FunctionPluginTypechec
         {argumentType: FunctionArgumentType.STRING}
       ]
     },
+    'VALUE': {
+      method: 'value',
+      parameters: [
+        {argumentType: FunctionArgumentType.NUMBER}
+      ]
+    },
   }
 
   /**
@@ -378,6 +384,19 @@ export class TextPlugin extends FunctionPlugin implements FunctionPluginTypechec
     return this.runFunction(ast.args, state, this.metadata('UPPER'), (arg: string) => {
       return arg.toUpperCase()
     })
+  }
+
+  /**
+   * Corresponds to VALUE(text)
+   *
+   * Converts a text string that represents a number to a number. The NUMBER argument type performs the
+   * text-to-number coercion (and yields #VALUE! for non-numeric text), so this returns the coerced value.
+   *
+   * @param ast
+   * @param state
+   */
+  public value(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('VALUE'), (value: number) => value)
   }
 
   private escapeRegExpSpecialCharacters(text: string): string {
