@@ -12,7 +12,6 @@ import {CellDependency} from '../CellDependency'
 import {Config} from '../Config'
 import {ContentChanges} from '../ContentChanges'
 import {ErrorMessage} from '../error-message'
-import {rangeIntersectionAtAddress} from '../interpreter/ArithmeticHelper'
 import {FunctionRegistry} from '../interpreter/FunctionRegistry'
 import {
   EmptyValue,
@@ -556,7 +555,7 @@ export class DependencyGraph {
       // labelled value from another sheet" pattern — leaving same-sheet bare ranges as #VALUE! (the
       // engine's existing, deliberately non-intersecting behavior).
       if (value.range !== undefined && value.range.sheet !== address.sheet) {
-        return rangeIntersectionAtAddress(value, address) ?? new CellError(ErrorType.VALUE, ErrorMessage.ScalarExpected)
+        return value.scalarAtAddress(address) ?? new CellError(ErrorType.VALUE, ErrorMessage.ScalarExpected)
       }
       return new CellError(ErrorType.VALUE, ErrorMessage.ScalarExpected)
     }
