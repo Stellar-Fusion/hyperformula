@@ -5,6 +5,7 @@
 
 import {CellError, ErrorType} from '../../Cell'
 import {ErrorMessage} from '../../error-message'
+import {roundHalfAwayFromZero} from '../../format/format'
 import {ProcedureAst} from '../../parser'
 import {InterpreterState} from '../InterpreterState'
 import {InterpreterValue, RawScalarValue} from '../InterpreterValue'
@@ -22,6 +23,14 @@ export class TextPlugin extends FunctionPlugin implements FunctionPluginTypechec
       ],
       repeatLastArgs: 1,
       expandRanges: true,
+    },
+    'FIXED': {
+      method: 'fixed',
+      parameters: [
+        {argumentType: FunctionArgumentType.NUMBER},
+        {argumentType: FunctionArgumentType.NUMBER, defaultValue: 2},
+        {argumentType: FunctionArgumentType.BOOLEAN, defaultValue: false},
+      ],
     },
     'CONCAT': {
       method: 'concat',
@@ -179,6 +188,49 @@ export class TextPlugin extends FunctionPlugin implements FunctionPluginTypechec
   public concatenate(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
     return this.runFunction(ast.args, state, this.metadata('CONCATENATE'), (...args) => {
       return ''.concat(...args)
+    })
+  }
+
+  public fixed(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('FIXED'), (value: number, decimals: number, noCommas: boolean) => {
+      const places = Math.trunc(decimals)
+      // Reuse the format engine's decimal-string rounder (round-half-away-from-zero without the
+      // multiply-based IEEE noise, e.g. 1.005 -> "1.01"). It leaves extreme magnitudes/precisions
+      // unshifted; that's fine here, the double already carries every significant digit.
+      let rounded = roundHalfAwayFromZero(value, places)
+      if (Number.isNaN(rounded)) {
+        rounded = value
+      }
+      if (!isFinite(rounded)) {
+        return new CellError(ErrorType.VALUE, ErrorMessage.NaN)
+      }
+      // toFixed only accepts 0..100 fraction digits and switches to exponent form at 1e21; guard both
+      // so a large `decimals` or magnitude can never throw or leak an "e" into the grouped output.
+      const decimalPlaces = Math.min(100, Math.max(0, places))
+      const magnitude = Math.abs(rounded)
+      const body = magnitude < 1e21
+        ? magnitude.toFixed(decimalPlaces)
+        : magnitude.toLocaleString('en-US', {maximumFractionDigits: 0, useGrouping: false}) +
+          (decimalPlaces > 0 ? `.${'0'.repeat(decimalPlaces)}` : '')
+
+      const [integerPart, decimalPart] = body.split('.')
+      const decimalSeparator = this.config.decimalSeparator
+      // Never let the grouping separator collide with the decimal separator (a comma-decimal locale
+      // groups with '.'), and honour an explicit config separator when set.
+      const thousandSeparator = noCommas
+        ? ''
+        : this.config.thousandSeparator !== ''
+          ? this.config.thousandSeparator
+          : decimalSeparator === ','
+            ? '.'
+            : ','
+      const groupedInteger = thousandSeparator === ''
+        ? integerPart
+        : integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousandSeparator)
+      const magnitudeText = decimalPart === undefined ? groupedInteger : `${groupedInteger}${decimalSeparator}${decimalPart}`
+      // A value that rounds to zero yields +0/-0, for which `rounded < 0` is already false, so no
+      // sign leaks onto "0.00" (Excel: FIXED(-0.001,1) -> "0.0").
+      return rounded < 0 ? `-${magnitudeText}` : magnitudeText
     })
   }
 

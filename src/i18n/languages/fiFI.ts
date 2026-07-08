@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#ARVO!',
   },
   functions: {
+    IRR: 'SISÄINEN.KORKO',
+    FIXED: 'KIINTEÄ',
     FILTER: 'FILTER',
     ADDRESS: 'OSOITE',
     'ARRAY_CONSTRAIN': 'ARRAY_CONSTRAIN',

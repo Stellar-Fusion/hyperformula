@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#VÄRDEFEL!',
   },
   functions: {
+    IRR: 'IRR',
+    FIXED: 'FASTTAL',
     FILTER: 'FILTER',
     ADDRESS: 'ADRESS',
     'ARRAY_CONSTRAIN': 'ARRAY_CONSTRAIN',

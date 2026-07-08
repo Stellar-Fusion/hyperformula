@@ -256,6 +256,14 @@ export class FinancialPlugin extends FunctionPlugin implements FunctionPluginTyp
       repeatLastArgs: 1,
       returnNumberType: NumberType.NUMBER_CURRENCY
     },
+    'IRR': {
+      method: 'irr',
+      parameters: [
+        {argumentType: FunctionArgumentType.RANGE},
+        {argumentType: FunctionArgumentType.NUMBER, defaultValue: 0.1},
+      ],
+      returnNumberType: NumberType.NUMBER_PERCENT
+    },
     'MIRR': {
       method: 'mirr',
       parameters: [
@@ -663,6 +671,20 @@ export class FinancialPlugin extends FunctionPlugin implements FunctionPluginTyp
     )
   }
 
+  public irr(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('IRR'),
+      (range: SimpleRangeValue, guess: number) => {
+        // Excel IRR reads cash flows in range order, ignoring text/logical/empty cells and
+        // propagating a cell error — exactly manyToExactNumbers' behaviour (as used by MIRR).
+        const cashflows = this.arithmeticHelper.manyToExactNumbers(range.valuesFromTopLeftCorner())
+        if (cashflows instanceof CellError) {
+          return cashflows
+        }
+        return irrCore(cashflows, guess)
+      }
+    )
+  }
+
   public mirr(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
     return this.runFunction(ast.args, state, this.metadata('MIRR'),
       (range: SimpleRangeValue, frate: number, rrate: number) => {
@@ -781,6 +803,58 @@ function fvCore(rate: number, periods: number, payment: number, value: number, t
 
 function ppmtCore(rate: number, period: number, periods: number, present: number, future: number, type: number): number {
   return pmtCore(rate, periods, present, future, type) - ipmtCore(rate, period, periods, present, future, type)
+}
+
+function irrNpv(cashflows: number[], rate: number): number {
+  let acc = 0
+  for (let i = 0; i < cashflows.length; i++) {
+    acc += cashflows[i] / Math.pow(1 + rate, i)
+  }
+  return acc
+}
+
+/*
+ * IRR is the discount rate r for which the cash flows sum to zero: sum_i cf_i / (1+r)^i = 0, with the
+ * first flow at period 0 (undiscounted). Solved with Newton-Raphson from `guess`; on divergence or a flat
+ * derivative we return #NUM! (Excel's behaviour), and a step below -1 is damped back toward -1 to stay in
+ * the function's domain. A root only exists when the flows change sign, so same-sign input short-circuits.
+ * A converged step is accepted only when the rate is in-domain (1+r > 0) AND the NPV residual is actually
+ * ~0 — Newton can "converge" (tiny step) on a flat tail to a value that is not a root, and Excel returns
+ * #NUM! for those; the residual is compared relative to the cash-flow magnitude so scale doesn't matter.
+ */
+function irrCore(cashflows: number[], guess: number): number | CellError {
+  if (cashflows.length < 2 || !cashflows.some(v => v > 0) || !cashflows.some(v => v < 0)) {
+    return new CellError(ErrorType.NUM, ErrorMessage.NoConvergence)
+  }
+  const magnitude = cashflows.reduce((acc, v) => acc + Math.abs(v), 0)
+  const maxIterations = 50
+  const stepTolerance = 1e-10
+  const residualTolerance = 1e-7 * (magnitude || 1)
+  let rate = guess > -1 ? guess : -0.999999
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
+    let npv = 0
+    let derivative = 0
+    for (let i = 0; i < cashflows.length; i++) {
+      const denominator = Math.pow(1 + rate, i)
+      npv += cashflows[i] / denominator
+      derivative -= (i * cashflows[i]) / (denominator * (1 + rate))
+    }
+    if (!isFinite(npv) || !isFinite(derivative) || derivative === 0) {
+      break
+    }
+    const nextRate = rate - npv / derivative
+    if (!isFinite(nextRate)) {
+      break
+    }
+    if (Math.abs(nextRate - rate) < stepTolerance) {
+      if (nextRate > -1 && Math.abs(irrNpv(cashflows, nextRate)) <= residualTolerance) {
+        return nextRate
+      }
+      break
+    }
+    rate = nextRate <= -1 ? (rate - 1) / 2 : nextRate
+  }
+  return new CellError(ErrorType.NUM, ErrorMessage.NoConvergence)
 }
 
 function npvCore(rate: number, args: number[]): number | CellError {

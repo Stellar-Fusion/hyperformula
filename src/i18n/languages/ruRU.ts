@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#ЗНАЧ!',
   },
   functions: {
+    IRR: 'ВСД',
+    FIXED: 'ФИКСИРОВАННЫЙ',
     FILTER: 'FILTER',
     ADDRESS: 'АДРЕС',
     'ARRAY_CONSTRAIN': 'ARRAY_CONSTRAIN',

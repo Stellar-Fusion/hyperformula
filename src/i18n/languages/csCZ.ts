@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#HODNOTA!',
   },
   functions: {
+    IRR: 'MÍRA.VÝNOSNOSTI',
+    FIXED: 'ZAOKROUHLIT.NA.TEXT',
     FILTER: 'FILTER',
     ADDRESS: 'ODKAZ',
     'ARRAY_CONSTRAIN': 'ARRAY_CONSTRAIN',
