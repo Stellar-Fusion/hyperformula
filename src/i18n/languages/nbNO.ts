@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#VERDI!',
   },
   functions: {
+    IRR: 'IR',
+    FIXED: 'FIKSER',
     FILTER: 'FILTER',
     ADDRESS: 'ADRESSE',
     'ARRAY_CONSTRAIN': 'ARRAY_CONSTRAIN',

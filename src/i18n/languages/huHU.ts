@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#ÉRTÉK!',
   },
   functions: {
+    IRR: 'BMR',
+    FIXED: 'FIX',
     FILTER: 'FILTER',
     ADDRESS: 'CÍM',
     'ARRAY_CONSTRAIN': 'ARRAY_CONSTRAIN',

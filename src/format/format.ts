@@ -171,7 +171,7 @@ function countPercentSigns(tokens: FormatToken[]): number {
  * avoids re-introducing floating-point noise. ponytail: values >= 1e15 have no meaningful
  * fractional digits in a double, so skip the shift (whose `e`-notation string would break) and
  * return them unchanged. */
-function roundHalfAwayFromZero(value: number, decimals: number): number {
+export function roundHalfAwayFromZero(value: number, decimals: number): number {
   if (!isFinite(value) || Math.abs(value) >= 1e15) {
     return value
   }
