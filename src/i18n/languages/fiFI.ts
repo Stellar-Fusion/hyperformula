@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#ARVO!',
   },
   functions: {
+    'RANK.AVG': 'ARVON.MUKAAN.KESKIARVO',
+    NUMBERVALUE: 'NUMEROARVO',
     IRR: 'SISÄINEN.KORKO',
     FIXED: 'KIINTEÄ',
     FILTER: 'FILTER',

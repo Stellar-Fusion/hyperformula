@@ -18,6 +18,8 @@ export const dictionary: RawTranslationPackage = {
     VALUE: '#¡VALOR!',
   },
   functions: {
+    'RANK.AVG': 'JERARQUIA.MEDIA',
+    NUMBERVALUE: 'VALORNÚMERO',
     IRR: 'TIR',
     FIXED: 'DECIMAL',
     FILTER: 'FILTER',

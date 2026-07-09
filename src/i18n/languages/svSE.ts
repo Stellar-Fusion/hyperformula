@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#VÄRDEFEL!',
   },
   functions: {
+    'RANK.AVG': 'RANG.MED',
+    NUMBERVALUE: 'TALVÄRDE',
     IRR: 'IRR',
     FIXED: 'FASTTAL',
     FILTER: 'FILTER',

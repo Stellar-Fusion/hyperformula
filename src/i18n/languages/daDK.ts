@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#VÆRDI!',
   },
   functions: {
+    'RANK.AVG': 'PLADS.GNSN',
+    NUMBERVALUE: 'TALVÆRDI',
     IRR: 'IA',
     FIXED: 'FAST',
     FILTER: 'FILTER',

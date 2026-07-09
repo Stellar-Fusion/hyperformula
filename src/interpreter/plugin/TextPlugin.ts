@@ -175,6 +175,14 @@ export class TextPlugin extends FunctionPlugin implements FunctionPluginTypechec
         {argumentType: FunctionArgumentType.NUMBER}
       ]
     },
+    'NUMBERVALUE': {
+      method: 'numberValue',
+      parameters: [
+        {argumentType: FunctionArgumentType.STRING},
+        {argumentType: FunctionArgumentType.STRING, optionalArg: true},
+        {argumentType: FunctionArgumentType.STRING, optionalArg: true},
+      ]
+    },
   }
 
   /**
@@ -449,6 +457,46 @@ export class TextPlugin extends FunctionPlugin implements FunctionPluginTypechec
    */
   public value(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
     return this.runFunction(ast.args, state, this.metadata('VALUE'), (value: number) => value)
+  }
+
+  public numberValue(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(
+      ast.args,
+      state,
+      this.metadata('NUMBERVALUE'),
+      (text: string, decimalSeparatorArg?: string, groupSeparatorArg?: string) => {
+        const decimalSeparator = (decimalSeparatorArg ?? this.config.decimalSeparator).charAt(0) || '.'
+        const groupSeparator = (groupSeparatorArg ?? this.config.thousandSeparator).charAt(0)
+        if (groupSeparator !== '' && groupSeparator === decimalSeparator) {
+          return new CellError(ErrorType.VALUE, ErrorMessage.NumberCoercion)
+        }
+        // Excel NUMBERVALUE ignores all whitespace, strips group separators, normalises the decimal
+        // separator to '.', and divides by 100 for each trailing '%'. An empty string is 0.
+        let normalized = text.replace(/\s+/g, '')
+        if (normalized === '') {
+          return 0
+        }
+        let percentDivisor = 1
+        while (normalized.endsWith('%')) {
+          percentDivisor *= 100
+          normalized = normalized.slice(0, -1)
+        }
+        if (groupSeparator !== '') {
+          normalized = normalized.split(groupSeparator).join('')
+        }
+        if (decimalSeparator !== '.') {
+          if (normalized.includes('.')) {
+            return new CellError(ErrorType.VALUE, ErrorMessage.NumberCoercion)
+          }
+          normalized = normalized.split(decimalSeparator).join('.')
+        }
+        // At most one decimal point, then a plain (optionally signed/exponent) number.
+        if ((normalized.match(/\./g) ?? []).length > 1 || !/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(normalized)) {
+          return new CellError(ErrorType.VALUE, ErrorMessage.NumberCoercion)
+        }
+        return Number(normalized) / percentDivisor
+      },
+    )
   }
 
   private escapeRegExpSpecialCharacters(text: string): string {

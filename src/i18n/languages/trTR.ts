@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#DEĞER!',
   },
   functions: {
+    'RANK.AVG': 'RANK.ORT',
+    NUMBERVALUE: 'SAYIDEĞERI',
     IRR: 'IRR',
     FIXED: 'SAYIDÜZENLE',
     FILTER: 'FILTER',

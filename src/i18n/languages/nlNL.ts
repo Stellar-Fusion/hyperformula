@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#WAARDE!',
   },
   functions: {
+    'RANK.AVG': 'RANG.GEMIDDELDE',
+    NUMBERVALUE: 'NUMERIEKE.WAARDE',
     IRR: 'IR',
     FIXED: 'VAST',
     FILTER: 'FILTER',
