@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#ЗНАЧ!',
   },
   functions: {
+    'RANK.AVG': 'РАНГ.СР',
+    NUMBERVALUE: 'ЧЗНАЧ',
     IRR: 'ВСД',
     FIXED: 'ФИКСИРОВАННЫЙ',
     FILTER: 'FILTER',

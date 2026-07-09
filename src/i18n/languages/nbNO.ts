@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#VERDI!',
   },
   functions: {
+    'RANK.AVG': 'RANG.GJSN',
+    NUMBERVALUE: 'TALLVERDI',
     IRR: 'IR',
     FIXED: 'FIKSER',
     FILTER: 'FILTER',

@@ -38,6 +38,14 @@ export class MedianPlugin extends FunctionPlugin implements FunctionPluginTypech
         {argumentType: FunctionArgumentType.NUMBER, minValue: 1},
       ],
     },
+    'RANK.AVG': {
+      method: 'rankAvg',
+      parameters: [
+        {argumentType: FunctionArgumentType.NUMBER},
+        {argumentType: FunctionArgumentType.RANGE},
+        {argumentType: FunctionArgumentType.NUMBER, defaultValue: 0},
+      ],
+    },
   }
 
   /**
@@ -65,6 +73,25 @@ export class MedianPlugin extends FunctionPlugin implements FunctionPluginTypech
           return values[Math.floor(values.length / 2)]
         }
       })
+  }
+
+  public rankAvg(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('RANK.AVG'),
+      (value: number, range: SimpleRangeValue, order: number) => {
+        const vals = this.arithmeticHelper.manyToExactNumbers(range.valuesFromTopLeftCorner())
+        if (vals instanceof CellError) {
+          return vals
+        }
+        const ties = vals.filter(v => v === value).length
+        if (ties === 0) {
+          return new CellError(ErrorType.NA, ErrorMessage.ValueNotFound)
+        }
+        // order 0 (or omitted) = descending: rank 1 is the largest. Non-zero = ascending. Tied values
+        // share the average of the consecutive ranks they occupy.
+        const better = order === 0 ? vals.filter(v => v > value).length : vals.filter(v => v < value).length
+        return better + (ties + 1) / 2
+      }
+    )
   }
 
   public large(ast: ProcedureAst, state: InterpreterState): InterpreterValue {

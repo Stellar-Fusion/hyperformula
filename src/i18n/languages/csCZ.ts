@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#HODNOTA!',
   },
   functions: {
+    'RANK.AVG': 'POŘADÍ.PRŮMĚR',
+    NUMBERVALUE: 'ČÍSELNÁHODNOTA',
     IRR: 'MÍRA.VÝNOSNOSTI',
     FIXED: 'ZAOKROUHLIT.NA.TEXT',
     FILTER: 'FILTER',

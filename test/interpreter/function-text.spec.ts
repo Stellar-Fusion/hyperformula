@@ -351,4 +351,10 @@ describe('Custom date printing', () => {
     expect(engine.getCellValue(adr('B1'))).toEqual('12-31 24:00')
     expect(engine.getCellValue(adr('B2'))).toEqual('12-31 19:40.79999')
   })
+
+  it('renders the underscore spacing code (_x) as a single space, not literal text', () => {
+    const engine = HyperFormula.buildFromArray([['=TEXT(0.015,"0.0%_)")'], ['=TEXT(5,"0.0_-")']])
+    expect(engine.getCellValue(adr('A1'))).toEqual('1.5% ')
+    expect(engine.getCellValue(adr('A2'))).toEqual('5.0 ')
+  })
 })

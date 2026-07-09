@@ -130,6 +130,15 @@ function renderFormatLiteral(text: string): string {
       ++i
       continue
     }
+    // `_x` reserves space the width of the next character (used for alignment, e.g. "0.0_)"); render
+    // it as a single space and skip the width char, rather than leaking `_)` into the output.
+    if (ch === '_') {
+      result += ' '
+      if (i + 1 < text.length) {
+        ++i
+      }
+      continue
+    }
     if (ch === '"') {
       continue
     }
