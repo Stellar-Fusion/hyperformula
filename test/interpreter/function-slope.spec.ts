@@ -90,4 +90,15 @@ describe('SLOPE', () => {
 
     expect(engine.getCellValue(adr('A4'))).toEqualError(detailedError(ErrorType.NA))
   })
+
+  it('returns #DIV/0! when all known_x values are identical (zero x-variance)', () => {
+    const engine = HyperFormula.buildFromArray([
+      [1, 3],
+      [2, 3],
+      [4, 3],
+      ['=SLOPE(A1:A3, B1:B3)'],
+    ])
+
+    expect(engine.getCellValue(adr('A4'))).toEqualError(detailedError(ErrorType.DIV_BY_ZERO))
+  })
 })

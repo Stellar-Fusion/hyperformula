@@ -377,6 +377,9 @@ export class StatisticalAggregationPlugin extends FunctionPlugin implements Func
         if (n <= 2) {
           return new CellError(ErrorType.DIV_BY_ZERO, ErrorMessage.ThreeValues)
         }
+        if (sumsqerr(ret[1]) === 0) {
+          return new CellError(ErrorType.DIV_BY_ZERO)
+        }
         return Math.sqrt((sumsqerr(ret[0]) - Math.pow(covariance(ret[0], ret[1]) * (n - 1), 2) / sumsqerr(ret[1])) / (n - 2))
       })
   }
@@ -395,6 +398,9 @@ export class StatisticalAggregationPlugin extends FunctionPlugin implements Func
         const n = ret[0].length
         if (n <= 1) {
           return new CellError(ErrorType.DIV_BY_ZERO, ErrorMessage.TwoValues)
+        }
+        if (sumsqerr(ret[1]) === 0) {
+          return new CellError(ErrorType.DIV_BY_ZERO)
         }
         return covariance(ret[0], ret[1]) * (n - 1) / sumsqerr(ret[1])
       })
@@ -415,8 +421,12 @@ export class StatisticalAggregationPlugin extends FunctionPlugin implements Func
         if (n <= 1) {
           return new CellError(ErrorType.DIV_BY_ZERO, ErrorMessage.TwoValues)
         }
-        // intercept = mean(y) - slope * mean(x), slope = cov(y,x)*(n-1) / sumsqerr(x)
-        const slope = covariance(ret[0], ret[1]) * (n - 1) / sumsqerr(ret[1])
+        // intercept = mean(y) - slope * mean(x), slope = cov(y,x)*(n-1) / sumsqerr(x). Zero x-variance
+        // (all known_x identical) makes slope undefined — Excel returns #DIV/0! rather than a non-finite number.
+        if (sumsqerr(ret[1]) === 0) {
+          return new CellError(ErrorType.DIV_BY_ZERO)
+        }
+        const slope = (covariance(ret[0], ret[1]) * (n - 1)) / sumsqerr(ret[1])
         return mean(ret[0]) - slope * mean(ret[1])
       })
   }
