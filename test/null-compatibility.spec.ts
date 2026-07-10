@@ -11,7 +11,9 @@ describe('null compatibility', () => {
   it('should evaluate empty reference to 0', () => {
     const engine = HyperFormula.buildFromArray([['=A2']], {evaluateNullToZero: true})
     expect(engine.getCellValue(adr('A1'))).toEqual(0)
-    expect(engine.getCellValue(adr('A2'))).toBeNull()
+    // Fork divergence from upstream: under evaluateNullToZero the flag applies to empty cells too, so a
+    // blank cell reads as 0 (not null). This is the mode the source-error engine (common) runs in.
+    expect(engine.getCellValue(adr('A2'))).toEqual(0)
   })
 
   it('should evaluate if to null', () => {
@@ -23,7 +25,9 @@ describe('null compatibility', () => {
   it('should evaluate if to 0', () => {
     const engine = HyperFormula.buildFromArray([['=IF(TRUE(),A2)']], {evaluateNullToZero: true})
     expect(engine.getCellValue(adr('A1'))).toEqual(0)
-    expect(engine.getCellValue(adr('A2'))).toBeNull()
+    // Fork divergence from upstream: under evaluateNullToZero the flag applies to empty cells too (see
+    // 'should evaluate empty reference to 0'), so the blank cell reads as 0. This is common's mode.
+    expect(engine.getCellValue(adr('A2'))).toEqual(0)
   })
 
   it('should evaluate isblank with null', () => {
