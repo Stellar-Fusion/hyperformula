@@ -210,7 +210,7 @@ export class TextPlugin extends FunctionPlugin implements FunctionPluginTypechec
         rounded = value
       }
       if (!isFinite(rounded)) {
-        return new CellError(ErrorType.VALUE, ErrorMessage.NaN)
+        return new CellError(ErrorType.NUM, ErrorMessage.NaN)
       }
       // toFixed only accepts 0..100 fraction digits and switches to exponent form at 1e21; guard both
       // so a large `decimals` or magnitude can never throw or leak an "e" into the grouped output.

@@ -67,4 +67,9 @@ describe('Function FIXED', () => {
     const engine = HyperFormula.buildFromArray([['=FIXED(10^21,0)']])
     expect(engine.getCellValue(adr('A1'))).toEqual('1,000,000,000,000,000,000,000')
   })
+
+  it('returns #NUM! (not #VALUE!) for a non-finite value', () => {
+    const engine = HyperFormula.buildFromArray([['=FIXED(10^309,0)']])
+    expect(engine.getCellValue(adr('A1'))).toEqualError(detailedError(ErrorType.NUM))
+  })
 })
