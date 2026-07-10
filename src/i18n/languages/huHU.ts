@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#ÉRTÉK!',
   },
   functions: {
+    HSTACK: 'HSTACK',
+    VSTACK: 'VSTACK',
     'RANK.AVG': 'RANG.ÁTL',
     NUMBERVALUE: 'SZÁM.ÉRTÉK',
     IRR: 'BMR',
@@ -391,6 +393,7 @@ const dictionary: RawTranslationPackage = {
     FTEST: 'F.PRÓBA',
     STEYX: 'STHIBAYX',
     SLOPE: 'MEREDEKSÉG',
+    INTERCEPT: 'INTERCEPT',
     COVAR: 'KOVAR',
     'COVARIANCE.P': 'KOVARIANCIA.S',
     'COVARIANCE.S': 'KOVARIANCIA.M',

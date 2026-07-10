@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#WAARDE!',
   },
   functions: {
+    HSTACK: 'HSTACK',
+    VSTACK: 'VSTACK',
     'RANK.AVG': 'RANG.GEMIDDELDE',
     NUMBERVALUE: 'NUMERIEKE.WAARDE',
     IRR: 'IR',
@@ -391,6 +393,7 @@ const dictionary: RawTranslationPackage = {
     FTEST: 'F.TOETS',
     STEYX: 'STAND.FOUT.YX',
     SLOPE: 'RICHTING',
+    INTERCEPT: 'INTERCEPT',
     COVAR: 'COVARIANTIE',
     'COVARIANCE.P': 'COVARIANTIE.P',
     'COVARIANCE.S': 'COVARIANTIE.S',
