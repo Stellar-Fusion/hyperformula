@@ -301,6 +301,19 @@ describe('Function MATCH', () => {
         expect(engine.getCellValue(adr('A1'))).toEqual(3)
       })
 
+      it('finds an exact value present in an UNSORTED range (Excel-compatible fallback)', () => {
+        const engine = HyperFormula.buildFromArray([
+          ['=MATCH("2026E", A2:A6, 1)'],
+          ['2025E'],
+          ['2027E'],
+          ['2026E'],
+          ['FY'],
+          ['2024E'],
+        ])
+
+        expect(engine.getCellValue(adr('A1'))).toEqual(3)
+      })
+
       it('matches a sorted text range case-insensitively', () => {
         const engine = HyperFormula.buildFromArray([
           ['=MATCH("q3", A2:A5, 1)'],

@@ -336,14 +336,24 @@ export class LookupPlugin extends FunctionPlugin implements FunctionPluginTypech
     }
 
     const searchStrategy = rangeValue.width() === 1 ? this.columnSearch : this.rowSearch
-    const searchOptions: SearchOptions = type === 0
-      ? { ordering: 'none', ifNoMatch: 'returnNotFound' }
-      : { ordering: type === -1 ? 'desc' : 'asc', ifNoMatch: type === -1 ? 'returnUpperBound' : 'returnLowerBound' }
-    const index = searchStrategy.find(key, rangeValue, searchOptions)
-
-    if (index === -1) {
-      return new CellError(ErrorType.NA, ErrorMessage.ValueNotFound)
+    if (type === 0) {
+      const index = searchStrategy.find(key, rangeValue, { ifNoMatch: 'returnNotFound', ordering: 'none' })
+      return index === -1 ? new CellError(ErrorType.NA, ErrorMessage.ValueNotFound) : index + 1
     }
-    return index + 1
+
+    const orderedOptions: SearchOptions =
+      type === -1
+        ? { ifNoMatch: 'returnUpperBound', ordering: 'desc' }
+        : { ifNoMatch: 'returnLowerBound', ordering: 'asc' }
+    const index = searchStrategy.find(key, rangeValue, orderedOptions)
+    if (index !== -1) {
+      return index + 1
+    }
+
+    // Approximate match (type 1/-1) binary-searches assuming the range is sorted. When it isn't, the
+    // search can miss a value that is actually present; Excel still returns it. Fall back to an exact
+    // scan so a present exact value isn't lost to the sort assumption.
+    const exactIndex = searchStrategy.find(key, rangeValue, { ifNoMatch: 'returnNotFound', ordering: 'none' })
+    return exactIndex === -1 ? new CellError(ErrorType.NA, ErrorMessage.ValueNotFound) : exactIndex + 1
   }
 }
