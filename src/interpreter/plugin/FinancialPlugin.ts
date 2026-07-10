@@ -739,15 +739,26 @@ export class FinancialPlugin extends FunctionPlugin implements FunctionPluginTyp
   public xnpv(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
     return this.runFunction(ast.args, state, this.metadata('XNPV'),
       (rate: number, values: SimpleRangeValue, dates: SimpleRangeValue) => {
-        const valArr = values.valuesFromTopLeftCorner()
+        // Unwrap ExtendedNumber (formatted/date/percent cells wrap their number as { val, format }) before
+        // the numeric check — a real model's dates row is date-formatted, so a raw typeof test wrongly
+        // rejects it as #VALUE!. getRawValue leaves primitives untouched.
+        const valArr = values.valuesFromTopLeftCorner().map(getRawValue)
         for (const val of valArr) {
+          // Propagate a real input error (e.g. #REF! from a deleted cell) with its own type, matching
+          // Excel; only a genuinely non-numeric, non-error value is a #VALUE!/NumberExpected.
+          if (val instanceof CellError) {
+            return val
+          }
           if (typeof val !== 'number') {
             return new CellError(ErrorType.VALUE, ErrorMessage.NumberExpected)
           }
         }
         const valArrNum = valArr as number[]
-        const dateArr = dates.valuesFromTopLeftCorner()
+        const dateArr = dates.valuesFromTopLeftCorner().map(getRawValue)
         for (const date of dateArr) {
+          if (date instanceof CellError) {
+            return date
+          }
           if (typeof date !== 'number') {
             return new CellError(ErrorType.VALUE, ErrorMessage.NumberExpected)
           }
