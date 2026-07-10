@@ -42,6 +42,24 @@ export class ArrayPlugin extends FunctionPlugin implements FunctionPluginTypeche
         {argumentType: FunctionArgumentType.RANGE},
       ],
       repeatLastArgs: 1,
+    },
+    'VSTACK': {
+      method: 'vstack',
+      arraySizeMethod: 'vstackArraySize',
+      arrayFunction: true,
+      parameters: [
+        {argumentType: FunctionArgumentType.RANGE},
+      ],
+      repeatLastArgs: 1,
+    },
+    'HSTACK': {
+      method: 'hstack',
+      arraySizeMethod: 'hstackArraySize',
+      arrayFunction: true,
+      parameters: [
+        {argumentType: FunctionArgumentType.RANGE},
+      ],
+      repeatLastArgs: 1,
     }
   }
 
@@ -145,6 +163,62 @@ export class ArrayPlugin extends FunctionPlugin implements FunctionPluginTypeche
 
     const width = Math.max(...(subChecks).map(val => val.width))
     const height = Math.max(...(subChecks).map(val => val.height))
+    return new ArraySize(width, height)
+  }
+
+  public vstack(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('VSTACK'), (...ranges: SimpleRangeValue[]) => {
+      const width = Math.max(...ranges.map(range => range.width()))
+      const result: InternalScalarValue[][] = []
+      for (const range of ranges) {
+        for (const row of range.data) {
+          const padded = row.slice()
+          while (padded.length < width) {
+            padded.push(new CellError(ErrorType.NA))
+          }
+          result.push(padded)
+        }
+      }
+      return SimpleRangeValue.onlyValues(result)
+    })
+  }
+
+  public vstackArraySize(ast: ProcedureAst, state: InterpreterState): ArraySize {
+    if (ast.args.length === 0) {
+      return ArraySize.error()
+    }
+    const metadata = this.metadata('VSTACK')
+    const subChecks = ast.args.map((arg) => this.arraySizeForAst(arg, new InterpreterState(state.formulaAddress, state.arraysFlag || (metadata?.arrayFunction ?? false))))
+    const width = Math.max(...subChecks.map(val => val.width))
+    const height = subChecks.reduce((sum, val) => sum + val.height, 0)
+    return new ArraySize(width, height)
+  }
+
+  public hstack(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('HSTACK'), (...ranges: SimpleRangeValue[]) => {
+      const height = Math.max(...ranges.map(range => range.height()))
+      const result: InternalScalarValue[][] = Array.from({length: height}, () => [])
+      for (const range of ranges) {
+        const data = range.data
+        for (let i = 0; i < height; i++) {
+          const sourceRow: InternalScalarValue[] | undefined = data[i]
+          for (let j = 0; j < range.width(); j++) {
+            result[i].push(sourceRow ? sourceRow[j] : new CellError(ErrorType.NA))
+          }
+        }
+      }
+      return SimpleRangeValue.onlyValues(result)
+    })
+  }
+
+  public hstackArraySize(ast: ProcedureAst, state: InterpreterState): ArraySize {
+    if (ast.args.length === 0) {
+      return ArraySize.error()
+    }
+    const metadata = this.metadata('HSTACK')
+    const subChecks = ast.args.map((arg) => this.arraySizeForAst(arg, new InterpreterState(state.formulaAddress, state.arraysFlag || (metadata?.arrayFunction ?? false))))
+    const width = subChecks.reduce((sum, val) => sum + val.width, 0)
+    const height = Math.max(...subChecks.map(val => val.height))
     return new ArraySize(width, height)
   }
 }
