@@ -357,4 +357,11 @@ describe('Custom date printing', () => {
     expect(engine.getCellValue(adr('A1'))).toEqual('1.5% ')
     expect(engine.getCellValue(adr('A2'))).toEqual('5.0 ')
   })
+
+  it('renders an underscore inside a quoted literal verbatim (not as spacing)', () => {
+    // The quoted literal "a_b" alongside a number code: the `_` inside quotes is literal (Excel), so the
+    // result is "5a_b", not "5a b" (which the underscore-as-spacing code would produce).
+    const engine = HyperFormula.buildFromArray([['=TEXT(5,"0""a_b""")']])
+    expect(engine.getCellValue(adr('A1'))).toEqual('5a_b')
+  })
 })

@@ -123,8 +123,19 @@ function countChars(text: string, char: string) {
  * delimiters, leaving the display text (e.g. `\%` and `"%"` both render as `%`). */
 function renderFormatLiteral(text: string): string {
   let result = ''
+  let inQuote = false
   for (let i = 0; i < text.length; ++i) {
     const ch = text[i]
+    // Inside a quoted literal every character is verbatim — `_`, `\`, etc. are NOT format tokens there
+    // (Excel: "a_b" renders "a_b", not "a b"). The quote chars themselves are consumed.
+    if (ch === '"') {
+      inQuote = !inQuote
+      continue
+    }
+    if (inQuote) {
+      result += ch
+      continue
+    }
     if (ch === '\\' && i + 1 < text.length) {
       result += text[i + 1]
       ++i
@@ -137,9 +148,6 @@ function renderFormatLiteral(text: string): string {
       if (i + 1 < text.length) {
         ++i
       }
-      continue
-    }
-    if (ch === '"') {
       continue
     }
     result += ch
