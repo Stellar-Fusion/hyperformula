@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#ARVO!',
   },
   functions: {
+    HSTACK: 'HSTACK',
+    VSTACK: 'VSTACK',
     'RANK.AVG': 'ARVON.MUKAAN.KESKIARVO',
     NUMBERVALUE: 'NUMEROARVO',
     IRR: 'SISÄINEN.KORKO',
@@ -391,6 +393,7 @@ const dictionary: RawTranslationPackage = {
     FTEST: 'FTESTI',
     STEYX: 'KESKIVIRHE',
     SLOPE: 'KULMAKERROIN',
+    INTERCEPT: 'INTERCEPT',
     COVAR: 'KOVARIANSSI',
     'COVARIANCE.P': 'KOVARIANSSI.P',
     'COVARIANCE.S': 'KOVARIANSSI.S',

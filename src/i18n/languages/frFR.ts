@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#VALEUR!',
   },
   functions: {
+    HSTACK: 'HSTACK',
+    VSTACK: 'VSTACK',
     'RANK.AVG': 'MOYENNE.RANG',
     NUMBERVALUE: 'VALEURNOMBRE',
     IRR: 'TRI',
@@ -391,6 +393,7 @@ const dictionary: RawTranslationPackage = {
     FTEST: 'TEST.F',
     STEYX: 'ERREUR.TYPE.XY',
     SLOPE: 'PENTE',
+    INTERCEPT: 'INTERCEPT',
     COVAR: 'COVARIANCE',
     'COVARIANCE.P': 'COVARIANCE.PEARSON',
     'COVARIANCE.S': 'COVARIANCE.STANDARD',

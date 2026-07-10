@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#VALUE!',
   },
   functions: {
+    HSTACK: 'HSTACK',
+    VSTACK: 'VSTACK',
     'RANK.AVG': 'RANK.AVG',
     NUMBERVALUE: 'NUMBERVALUE',
     IRR: 'IRR',
@@ -394,6 +396,7 @@ const dictionary: RawTranslationPackage = {
     FTEST: 'FTEST',
     STEYX: 'STEYX',
     SLOPE: 'SLOPE',
+    INTERCEPT: 'INTERCEPT',
     'CHISQ.TEST': 'CHISQ.TEST',
     CHITEST: 'CHITEST',
     'T.TEST': 'T.TEST',

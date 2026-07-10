@@ -117,6 +117,13 @@ export class StatisticalAggregationPlugin extends FunctionPlugin implements Func
         {argumentType: FunctionArgumentType.RANGE},
       ],
     },
+    'INTERCEPT': {
+      method: 'intercept',
+      parameters: [
+        {argumentType: FunctionArgumentType.RANGE},
+        {argumentType: FunctionArgumentType.RANGE},
+      ],
+    },
     'CHISQ.TEST': {
       method: 'chisqtest',
       parameters: [
@@ -390,6 +397,27 @@ export class StatisticalAggregationPlugin extends FunctionPlugin implements Func
           return new CellError(ErrorType.DIV_BY_ZERO, ErrorMessage.TwoValues)
         }
         return covariance(ret[0], ret[1]) * (n - 1) / sumsqerr(ret[1])
+      })
+  }
+
+  public intercept(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('INTERCEPT'),
+      (knownYs: SimpleRangeValue, knownXs: SimpleRangeValue) => {
+        if (knownYs.numberOfElements() !== knownXs.numberOfElements()) {
+          return new CellError(ErrorType.NA, ErrorMessage.EqualLength)
+        }
+
+        const ret = parseTwoArrays(knownYs, knownXs)
+        if (ret instanceof CellError) {
+          return ret
+        }
+        const n = ret[0].length
+        if (n <= 1) {
+          return new CellError(ErrorType.DIV_BY_ZERO, ErrorMessage.TwoValues)
+        }
+        // intercept = mean(y) - slope * mean(x), slope = cov(y,x)*(n-1) / sumsqerr(x)
+        const slope = covariance(ret[0], ret[1]) * (n - 1) / sumsqerr(ret[1])
+        return mean(ret[0]) - slope * mean(ret[1])
       })
   }
 

@@ -18,6 +18,8 @@ const dictionary: RawTranslationPackage = {
     VALUE: '#HODNOTA!',
   },
   functions: {
+    HSTACK: 'HSTACK',
+    VSTACK: 'VSTACK',
     'RANK.AVG': 'POŘADÍ.PRŮMĚR',
     NUMBERVALUE: 'ČÍSELNÁHODNOTA',
     IRR: 'MÍRA.VÝNOSNOSTI',
@@ -391,6 +393,7 @@ const dictionary: RawTranslationPackage = {
     FTEST: 'FTEST',
     STEYX: 'STEYX',
     SLOPE: 'SLOPE',
+    INTERCEPT: 'INTERCEPT',
     COVAR: 'COVAR',
     'COVARIANCE.P': 'COVARIANCE.P',
     'COVARIANCE.S': 'COVARIANCE.S',
