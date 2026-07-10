@@ -150,7 +150,9 @@ function defaultParseToDate(dateItems: string[], dateFormat: Maybe<string>): May
     return undefined
   }
 
-  const day = Number(dateItems[dayItem])
+  // A format without a day component (e.g. "MM/YYYY") defaults the day to 1, matching how Excel parses a
+  // month/year string such as "02/2014" into 1 Feb 2014 (month + year still required, below).
+  const day = dayItem === -1 ? 1 : Number(dateItems[dayItem])
   if (!(Number.isFinite(day) && Number.isInteger(day))) {
     return undefined
   }
