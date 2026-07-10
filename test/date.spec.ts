@@ -162,6 +162,13 @@ describe('Date helpers', () => {
     expect(dateHelper11.dateStringToDateNumber('31/99/12')).toEqual(new DateNumber(36525, 'DD/YY/MM'))
   })
 
+  it('stringToDateNumber - month/year format with no day component defaults the day to 1 (Excel MM/YYYY)', () => {
+    const dateHelper = new DateTimeHelper(new Config({dateFormats: ['MM/YYYY']}))
+    // Excel parses "02/2014" as 1 Feb 2014 (serial 41671); "12/1999" -> 1 Dec 1999 (serial 36495)
+    expect(dateHelper.dateStringToDateNumber('02/2014')).toEqual(new DateNumber(41671, 'MM/YYYY'))
+    expect(dateHelper.dateStringToDateNumber('12/1999')).toEqual(new DateNumber(36495, 'MM/YYYY'))
+  })
+
   it('stringToDateNumber - other time formats', () => {
     const dateHelper = new DateTimeHelper(new Config({timeFormats: ['mm:hh']}))
     expect(dateHelper.dateStringToDateNumber('60:02')).toEqual(new TimeNumber(0.125, 'mm:hh'))
@@ -240,10 +247,10 @@ describe('By default function parseDateTimeFromConfigFormats', () => {
     expect(parsedDate).toEqual({})
   })
 
-  it('returns {} when time format contains no day term', () => {
+  it('defaults the day to 1 when the date format has no day term (Excel month/year parsing)', () => {
     const dateHelper = new DateTimeHelper(new Config({ dateFormats: ['MM/YY'] }))
-    const parsedDate = dateHelper.parseDateTimeFromConfigFormats('12/12')
-    expect(parsedDate).toEqual({})
+    const { dateTime } = dateHelper.parseDateTimeFromConfigFormats('12/12')
+    expect(dateTime).toEqual({ year: 2012, month: 12, day: 1 })
   })
 
   it('returns {} when time format contains no month term', () => {
