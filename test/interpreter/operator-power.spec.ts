@@ -98,18 +98,17 @@ describe('Operator POWER', () => {
 
   })
 
-  it('returns the real odd root of a negative base (Excel: (-8)^(1/3) = -2)', () => {
+  it('returns #NUM! for a negative base raised to any non-integer exponent (Excel parity)', () => {
+    // Excel (and Sheets/LibreOffice) return #NUM! for a negative base with a fractional exponent — there
+    // is no real-odd-root special case, e.g. (-8)^(1/3) is #NUM!, not -2.
     const engine = HyperFormula.buildFromArray([
       [-8, '=A1^(1/3)'],
       [-32, '=A2^(1/5)'],
-      [-0.506, '=A3^(1/3)'],
-      [-8, '=A4^(1/2)'],
+      [-8, '=A3^(1/2)'],
     ])
 
-    expect(engine.getCellValue(adr('B1'))).toBeCloseTo(-2, 6)
-    expect(engine.getCellValue(adr('B2'))).toBeCloseTo(-2, 6)
-    expect(engine.getCellValue(adr('B3'))).toBeCloseTo(-0.796863, 5)
-    // an even root of a negative base has no real value — Excel returns #NUM!
-    expect(engine.getCellValue(adr('B4'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
+    expect(engine.getCellValue(adr('B1'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
+    expect(engine.getCellValue(adr('B2'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
+    expect(engine.getCellValue(adr('B3'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
   })
 })
