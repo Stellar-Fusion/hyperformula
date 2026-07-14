@@ -149,7 +149,26 @@ export class InformationPlugin extends FunctionPlugin implements FunctionPluginT
       ],
       doesNotNeedArgumentsToBeComputed: true,
       vectorizationForbidden: true,
+    },
+    'SINGLE': {
+      method: 'single',
+      parameters: [
+        {argumentType: FunctionArgumentType.SCALAR}
+      ],
     }
+  }
+
+  /**
+   * Corresponds to SINGLE(value) — Excel's implicit-intersection `@` operator (stored as
+   * `_xlfn.SINGLE`). Returns a single value: a scalar argument passes through unchanged, and a
+   * range argument is implicitly intersected to the cell on the formula's row/column (SCALAR
+   * argument coercion), yielding #VALUE! when there is no intersection.
+   *
+   * @param ast
+   * @param state
+   */
+  public single(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('SINGLE'), (value: InternalScalarValue) => value)
   }
 
   /**

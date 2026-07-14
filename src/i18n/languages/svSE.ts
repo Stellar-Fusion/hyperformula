@@ -198,6 +198,7 @@ const dictionary: RawTranslationPackage = {
     SECOND: 'SEKUND',
     SHEET: 'SHEET',
     SHEETS: 'SHEETS',
+    SINGLE: 'SINGLE',
     SIN: 'SIN',
     SINH: 'SINH',
     SLN: 'LINAVSKR',
