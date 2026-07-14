@@ -650,7 +650,16 @@ export function coerceScalarToString(arg: InternalScalarValue): string | CellErr
   } else if (arg === EmptyValue) {
     return ''
   } else if (isExtendedNumber(arg)) {
-    return getRawValue(arg).toString()
+    const raw = getRawValue(arg)
+    /* Excel coerces a number to text via its General format, which rounds to 15 significant digits.
+     * Without this, binary floating-point noise leaks into string operations — e.g. 2026.3+0.1
+     * stringifies as "2026.3999999999999", so RIGHT(...,1) returns "9" instead of "4" and breaks
+     * period-code / text-parsing formulas. Mirrors the display rounding in format.ts's numberFormat.
+     * 0, non-finite, and >=1e15 magnitudes are returned as-is (toPrecision would add e-notation). */
+    if (typeof raw === 'number' && raw !== 0 && isFinite(raw) && Math.abs(raw) < 1e15) {
+      return Number(raw.toPrecision(15)).toString()
+    }
+    return raw.toString()
   } else {
     return arg ? 'TRUE' : 'FALSE'
   }

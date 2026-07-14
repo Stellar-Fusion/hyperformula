@@ -160,6 +160,18 @@ describe('#coerceScalarToString', () => {
 
     expect(coerceScalarToString(new CellError(ErrorType.DIV_BY_ZERO))).toEqual(new CellError(ErrorType.DIV_BY_ZERO))
   })
+
+  it('rounds to 15 significant figures like Excel (absorbs binary floating-point noise)', () => {
+    // Excel coerces a number to text via its General format, which uses 15 significant digits.
+    // Without this, `RIGHT(2026.3+0.1,1)` returns "9" (from "2026.3999999999999") instead of "4".
+    expect(coerceScalarToString(2026.3 + 0.1)).toBe('2026.4')
+    expect(coerceScalarToString(0.1 + 0.2)).toBe('0.3')
+    expect(coerceScalarToString(1.1 * 3)).toBe('3.3')
+    // exact values and integers are unaffected
+    expect(coerceScalarToString(2026.4)).toBe('2026.4')
+    expect(coerceScalarToString(123456789)).toBe('123456789')
+    expect(coerceScalarToString(1 / 3)).toBe('0.333333333333333')
+  })
 })
 
 describe('check if type coercions are applied', () => {
