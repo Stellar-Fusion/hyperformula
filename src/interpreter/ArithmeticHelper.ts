@@ -124,7 +124,7 @@ export class ArithmeticHelper {
   }
 
   public pow = (left: ExtendedNumber, right: ExtendedNumber) => {
-    return Math.pow(getRawValue(left), getRawValue(right))
+    return realPow(getRawValue(left), getRawValue(right))
   }
 
   public addWithEpsilonRaw = (left: number, right: number): number => {
@@ -567,6 +567,24 @@ export class ArithmeticHelper {
       return [0, val]
     }
   }
+}
+
+/**
+ * Raise `base` to `exp`. `Math.pow(negative, fractional)` is NaN, but real-odd-root engines (Google
+ * Sheets, and the analyst model caches we validate against) return the real root when the exponent is
+ * the reciprocal of an ODD integer (cube, 5th, 7th root…) — e.g. `(-8)^(1/3) = -2`. Even roots of a
+ * negative base have no real value and stay NaN (→ #NUM!). Note: Excel's own `^`/POWER returns #NUM!
+ * for any negative base with a non-integer exponent; we match the caches, not Excel, here.
+ */
+export function realPow(base: number, exp: number): number {
+  if (base < 0 && Number.isFinite(exp) && !Number.isInteger(exp)) {
+    const reciprocal = 1 / exp
+    const rounded = Math.round(reciprocal)
+    if (rounded !== 0 && rounded % 2 !== 0 && Math.abs(reciprocal - rounded) < 1e-10) {
+      return -Math.pow(-base, exp)
+    }
+  }
+  return Math.pow(base, exp)
 }
 
 export function coerceComplexToString([re, im]: complex, symb?: string): string | CellError {
