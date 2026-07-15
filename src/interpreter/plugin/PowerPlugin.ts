@@ -4,6 +4,7 @@
  */
 
 import {ProcedureAst} from '../../parser'
+import {realPow} from '../ArithmeticHelper'
 import {InterpreterState} from '../InterpreterState'
 import {InterpreterValue} from '../InterpreterValue'
 import {FunctionArgumentType, FunctionPlugin, FunctionPluginTypecheck, ImplementedFunctions} from './FunctionPlugin'
@@ -20,6 +21,6 @@ export class PowerPlugin extends FunctionPlugin implements FunctionPluginTypeche
   }
 
   public power(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
-    return this.runFunction(ast.args, state, this.metadata('POWER'), Math.pow)
+    return this.runFunction(ast.args, state, this.metadata('POWER'), realPow)
   }
 }
