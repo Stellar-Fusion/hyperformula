@@ -577,6 +577,9 @@ export class ArithmeticHelper {
  * This matches both Excel and the analyst model caches.
  */
 export function realPow(base: number, exp: number): number {
+  if (base === 0 && exp === 0) {
+    return NaN /* Excel: 0^0 is #NUM! (Math.pow(0, 0) returns 1) */
+  }
   if (base < 0 && Number.isFinite(exp) && !Number.isInteger(exp)) {
     const reciprocal = 1 / exp
     const rounded = Math.round(reciprocal)
