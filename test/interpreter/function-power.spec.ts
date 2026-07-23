@@ -26,12 +26,23 @@ describe('Function POWER', () => {
     expect(engine.getCellValue(adr('A3'))).toEqualError(detailedError(ErrorType.VALUE, ErrorMessage.NumberCoercion))
   })
 
-  it('should return 1 for 0^0', () => {
+  it('should return #NUM! for 0^0 (Excel returns #NUM!, not 1)', () => {
     const engine = HyperFormula.buildFromArray([
       ['=POWER(0, 0)'],
     ])
 
-    expect(engine.getCellValue(adr('A1'))).toEqual(1)
+    expect(engine.getCellValue(adr('A1'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
+  })
+
+  it('returns the real odd root of a negative base; even/non-unit roots #NUM! (Excel parity)', () => {
+    // POWER shares realPow with the ^ operator: (-8)^(1/3) = -2, but (-8)^(2/3) and (-8)^(1/2) are #NUM!.
+    const engine = HyperFormula.buildFromArray([
+      ['=POWER(-8, 1/3)', '=POWER(-8, 2/3)', '=POWER(-8, 1/2)'],
+    ])
+
+    expect(engine.getCellValue(adr('A1'))).toBeCloseTo(-2, 6)
+    expect(engine.getCellValue(adr('B1'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
+    expect(engine.getCellValue(adr('C1'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
   })
 
   it('should return error for 0^N where N<0', () => {
