@@ -99,9 +99,8 @@ describe('Operator POWER', () => {
   })
 
   it('returns the real odd root of a negative base; even roots stay #NUM!', () => {
-    // Excel's ^ returns #NUM! for a negative base with a fractional exponent, but real-odd-root engines
-    // (Google Sheets, and the analyst model caches we validate against) return the real root, e.g.
-    // (-8)^(1/3) = -2. We match the caches: odd 1/n roots resolve to the real root; an even root of a
+    // Excel (verified: =(-8)^(1/3) returns -2, not #NUM!) and other spreadsheet engines return the real
+    // root of a negative base when the exponent is the reciprocal of an odd integer. An even root of a
     // negative base has no real value and stays #NUM!.
     const engine = HyperFormula.buildFromArray([
       [-8, '=A1^(1/3)'],
@@ -114,5 +113,16 @@ describe('Operator POWER', () => {
     expect(engine.getCellValue(adr('B2'))).toBeCloseTo(-2, 6)
     expect(engine.getCellValue(adr('B3'))).toBeCloseTo(-0.796863, 5)
     expect(engine.getCellValue(adr('B4'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
+  })
+
+  it('resolves an odd root written as a literal decimal exponent (the DGE ^0.2 case)', () => {
+    // 0.2 is not exactly 1/5 in floating point (1/0.2 !== 5 exactly), so the reciprocal-detection
+    // tolerance must still recognise it as a 5th root. (1+Q30)^0.2-1 with 1+Q30 = -625.937 -> -4.625.
+    const engine = HyperFormula.buildFromArray([
+      [-625.93693536165995, '=A1^0.2', '=A1^0.2-1'],
+    ])
+
+    expect(engine.getCellValue(adr('B1'))).toBeCloseTo(-3.6249841821717776, 6)
+    expect(engine.getCellValue(adr('C1'))).toBeCloseTo(-4.6249841821717776, 6)
   })
 })
