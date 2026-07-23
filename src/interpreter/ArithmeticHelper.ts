@@ -570,11 +570,11 @@ export class ArithmeticHelper {
 }
 
 /**
- * Raise `base` to `exp`. `Math.pow(negative, fractional)` is NaN, but real-odd-root engines (Google
- * Sheets, and the analyst model caches we validate against) return the real root when the exponent is
- * the reciprocal of an ODD integer (cube, 5th, 7th root…) — e.g. `(-8)^(1/3) = -2`. Even roots of a
- * negative base have no real value and stay NaN (→ #NUM!). Note: Excel's own `^`/POWER returns #NUM!
- * for any negative base with a non-integer exponent; we match the caches, not Excel, here.
+ * Raise `base` to `exp`. `Math.pow(negative, fractional)` is NaN, but Excel (verified: `=(-8)^(1/3)`
+ * returns `-2`, not #NUM!) and other spreadsheet engines return the real root when the exponent is the
+ * reciprocal of an ODD integer (cube, 5th, 7th root…) — e.g. `(-8)^(1/3) = -2`, `(-625.937)^0.2 =
+ * -3.625`. Even roots of a negative base have no real value and stay NaN (→ #NUM!, e.g. `(-8)^0.5`).
+ * This matches both Excel and the analyst model caches.
  */
 export function realPow(base: number, exp: number): number {
   if (base < 0 && Number.isFinite(exp) && !Number.isInteger(exp)) {
