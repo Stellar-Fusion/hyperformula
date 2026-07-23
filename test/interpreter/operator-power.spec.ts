@@ -115,6 +115,12 @@ describe('Operator POWER', () => {
     expect(engine.getCellValue(adr('B4'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
   })
 
+  it('returns #NUM! for 0^0 (Excel-verified; Math.pow returns 1)', () => {
+    const engine = HyperFormula.buildFromArray([['=0^0', '=POWER(0,0)']])
+    expect(engine.getCellValue(adr('A1'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
+    expect(engine.getCellValue(adr('B1'))).toEqualError(detailedError(ErrorType.NUM, ErrorMessage.NaN))
+  })
+
   it('resolves an odd root written as a literal decimal exponent (the DGE ^0.2 case)', () => {
     // 0.2 is not exactly 1/5 in floating point (1/0.2 !== 5 exactly), so the reciprocal-detection
     // tolerance must still recognise it as a 5th root. (1+Q30)^0.2-1 with 1+Q30 = -625.937 -> -4.625.
