@@ -39,6 +39,20 @@ describe('Function COUNTIFS', () => {
     expect(engine.getCellValue(adr('A4'))).toEqual(1)
   })
 
+  it('treats an empty criterion cell as 0 (Excel parity, not #VALUE! "Incorrect criterion")', () => {
+    // C1 is empty; Excel treats a reference to an empty criterion cell as the number 0. Before the fix
+    // this returned #VALUE! "Incorrect criterion" (the ESRT NAV Calc!U4 case). COUNTIFS + SUMIFS both
+    // route through the shared CriterionBuilder.fromCellValue.
+    const engine = HyperFormula.buildFromArray([
+      [0, 10, null, '=COUNTIFS(A1:A3, C1)', '=SUMIFS(B1:B3, A1:A3, C1)'],
+      [1, 20],
+      [0, 30],
+    ])
+
+    expect(engine.getCellValue(adr('D1'))).toEqual(2)   // A1=0, A3=0 match criterion 0
+    expect(engine.getCellValue(adr('E1'))).toEqual(40)  // B1(10) + B3(30) where A=0
+  })
+
   it('use partial cache', () => {
     const engine = HyperFormula.buildFromArray([
       ['0'],
