@@ -94,15 +94,40 @@ function formatSection(value: number, formatArg: string, config: Config, dateHel
  * dropped, not honoured — its section is still selected by sign only; full conditional section
  * selection is not modelled (rare in practice, and dropping beats leaking "[>100]" into the cell). */
 function stripDecorativeBrackets(formatArg: string): string {
-  return formatArg.replace(/\[([^\]]*)\]/g, (match, inner) => {
-    if (/^[hHmMsS]+$/.test(inner)) {
-      return match
+  let result = ''
+  let inQuote = false
+  for (let i = 0; i < formatArg.length; i++) {
+    const ch = formatArg[i]
+    // An escaped char (\x) is a display literal — emit both and skip, so \[ / \] survive for the
+    // downstream literal renderer.
+    if (ch === '\\' && i + 1 < formatArg.length) {
+      result += formatArg.slice(i, i + 2)
+      i++
+      continue
     }
-    if (inner.startsWith('$')) {
-      return inner.slice(1).split('-')[0]
+    if (ch === '"') {
+      inQuote = !inQuote
+      result += ch
+      continue
     }
-    return ''
-  })
+    // Only a structural (unquoted, unescaped) bracket is a directive. Inside a quoted literal it is
+    // display text and must survive.
+    if (ch === '[' && !inQuote) {
+      const end = formatArg.indexOf(']', i)
+      if (end !== -1) {
+        const inner = formatArg.slice(i + 1, end)
+        if (/^[hHmMsS]+$/.test(inner)) {
+          result += formatArg.slice(i, end + 1)
+        } else if (inner.startsWith('$')) {
+          result += inner.slice(1).split('-')[0]
+        }
+        i = end
+        continue
+      }
+    }
+    result += ch
+  }
+  return result
 }
 
 export function format(value: number, formatArg: string, config: Config, dateHelper: DateTimeHelper): RawScalarValue {

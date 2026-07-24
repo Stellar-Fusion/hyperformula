@@ -162,4 +162,13 @@ describe('FormatInterpreter', () => {
     expect(format(0.1, '[hh]:mm:ss', config, dateHelper)).toEqual('02:24:00')
     expect(format(0.1, '[mm]:ss', config, dateHelper)).toEqual('144:00')
   })
+
+  it('does NOT strip brackets inside a quoted literal (they are display text, not directives)', () => {
+    // A bracket inside a quoted string is literal display text — only structural [..] directives
+    // (colour/condition/locale) are decorative. Stripping quoted brackets mangles valid formats.
+    // (Content avoids date letters d/m/y/h/s, which the fork's date tokenizer mishandles inside
+    // quotes — a separate, pre-existing limitation.)
+    expect(format(5, '0"[x]"', config, dateHelper)).toEqual('5[x]')
+    expect(format(1234, '#,##0" [k]"', config, dateHelper)).toEqual('1,234 [k]')
+  })
 })
