@@ -118,4 +118,48 @@ describe('FormatInterpreter', () => {
     expect(format(12.34, '0.00', config, dateHelper)).toEqual('12.34')
     expect(format(2, 'dd-mm-yyyy', config, dateHelper)).toEqual('01-01-1900')
   })
+
+  it('applies thousands grouping for the #,##0 comma (Excel parity)', () => {
+    // The comma between digit placeholders is a thousands separator. Before the fix the parser
+    // stopped the number token at the comma, leaking ",##0.0" as literal text and dropping the
+    // grouping (the CMG EVRvCons commentary case: "$2,471.9" rendered as "$2472,##0.0").
+    expect(format(2471.9, '#,##0.0', config, dateHelper)).toEqual('2,471.9')
+    expect(format(2471.9, '$#,##0.0', config, dateHelper)).toEqual('$2,471.9')
+    expect(format(2471.9, '#,##0', config, dateHelper)).toEqual('2,472')
+    expect(format(1234567.89, '#,##0.00', config, dateHelper)).toEqual('1,234,567.89')
+    expect(format(11.36, '$#,##0.00', config, dateHelper)).toEqual('$11.36')
+    expect(format(-2471.9, '#,##0.0', config, dateHelper)).toEqual('-2,471.9')
+  })
+
+  it('leaves a comma-free format ungrouped (no regression)', () => {
+    expect(format(2471.9, '0.0', config, dateHelper)).toEqual('2471.9')
+    expect(format(1234, '000', config, dateHelper)).toEqual('1234')
+  })
+
+  it('scales by 1000 for each trailing comma (Excel $-thousands/$-millions display)', () => {
+    // A comma AFTER the last digit placeholder divides the displayed value by 1000 per comma.
+    // Distinct from the grouping comma between digits. Common in models showing "$ in thousands".
+    expect(format(1234567, '#,##0,', config, dateHelper)).toEqual('1,235')
+    expect(format(1234567, '#,##0,,', config, dateHelper)).toEqual('1')
+    expect(format(1500000, '0.0,,', config, dateHelper)).toEqual('1.5')
+    expect(format(2500, '0,', config, dateHelper)).toEqual('3')
+    expect(format(1234567, '#,##0.0,', config, dateHelper)).toEqual('1,234.6')
+  })
+
+  it('strips colour / condition brackets and renders embedded currency symbols', () => {
+    // [Red]/[Blue] colour codes and [>100] conditions are display directives, not part of the number
+    // pattern; unstripped they leak into the output (and [Red]'s "d" gets mangled by the date parser).
+    // [$symbol-locale] renders its currency symbol.
+    expect(format(-5, '[Red]0', config, dateHelper)).toEqual('-5')
+    expect(format(1234, '[Blue]#,##0', config, dateHelper)).toEqual('1,234')
+    expect(format(5, '[Green]0.0', config, dateHelper)).toEqual('5.0')
+    expect(format(5, '[$$-409]#,##0', config, dateHelper)).toEqual('$5')
+    expect(format(5, '[$£-809]#,##0', config, dateHelper)).toEqual('£5')
+  })
+
+  it('does NOT strip elapsed-time duration brackets (regression)', () => {
+    // [hh]/[mm]/[ss] are duration tokens consumed by the date/duration formatter — must survive.
+    expect(format(0.1, '[hh]:mm:ss', config, dateHelper)).toEqual('02:24:00')
+    expect(format(0.1, '[mm]:ss', config, dateHelper)).toEqual('144:00')
+  })
 })
