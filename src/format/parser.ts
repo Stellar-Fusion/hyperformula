@@ -6,7 +6,7 @@
 import {Maybe} from '../Maybe'
 
 const dateFormatRegex = /(\\.|dd|DD|d|D|mmmmm|MMMMM|mmmm|MMMM|mmm|MMM|mm|MM|m|M|YYYY|YY|yyyy|yy|HH|hh|H|h|ss(\.(0+|s+))?|s|AM\/PM|am\/pm|A\/P|a\/p|\[mm]|\[MM]|\[hh]|\[HH])/g
-const numberFormatRegex = /(\\.|[#0]+(\.[#0]*)?)/g
+const numberFormatRegex = /(\\.|[#0]+([,][#0]+)*(\.[#0]*)?,*)/g
 
 export enum TokenType {
   FORMAT = 'FORMAT',

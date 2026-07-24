@@ -85,7 +85,28 @@ function formatSection(value: number, formatArg: string, config: Config, dateHel
   return formatArg
 }
 
+/* Excel prefixes number formats with square-bracket directives: colour codes ([Red], [Blue],
+ * [Color 3]), condition tests ([>100]), and embedded currency/locale ([$£-809]). None belong to the
+ * numeric pattern — left in place they leak into the output, or (when they contain date letters, e.g.
+ * [Red]'s "d") get mangled by the date parser that runs first. Strip them, EXCEPT elapsed-time
+ * duration tokens ([h]/[hh]/[m]/[mm]/[s]/[ss]) which the date/duration formatter consumes. An
+ * [$symbol-locale] directive renders its currency symbol. ponytail: a condition like [>100] is
+ * dropped, not honoured — its section is still selected by sign only; full conditional section
+ * selection is not modelled (rare in practice, and dropping beats leaking "[>100]" into the cell). */
+function stripDecorativeBrackets(formatArg: string): string {
+  return formatArg.replace(/\[([^\]]*)\]/g, (match, inner) => {
+    if (/^[hHmMsS]+$/.test(inner)) {
+      return match
+    }
+    if (inner.startsWith('$')) {
+      return inner.slice(1).split('-')[0]
+    }
+    return ''
+  })
+}
+
 export function format(value: number, formatArg: string, config: Config, dateHelper: DateTimeHelper): RawScalarValue {
+  formatArg = stripDecorativeBrackets(formatArg)
   const sections = splitFormatSections(formatArg)
   if (sections.length <= 1) {
     return formatSection(value, formatArg, config, dateHelper)
@@ -117,6 +138,15 @@ export function padRight(number: number | string, size: number) {
 
 function countChars(text: string, char: string) {
   return text.split(char).length - 1
+}
+
+/* Insert thousands separators into an already-rendered integer string (e.g. "1234567" -> "1,234,567").
+ * Groups the digits in threes from the right; a leading `-` sign is preserved and not grouped. */
+function addThousandsSeparators(integerPart: string): string {
+  const negative = integerPart.startsWith('-')
+  const digits = negative ? integerPart.slice(1) : integerPart
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return negative ? '-' + grouped : grouped
 }
 
 /* Strip Excel format-literal syntax from free text: `\x` escapes (keep x) and `"..."` quote
@@ -183,6 +213,13 @@ function countPercentSigns(tokens: FormatToken[]): number {
     .reduce((count, token) => count + countActivePercent(token.value), 0)
 }
 
+/* Count trailing commas on the number FORMAT token(s) — each scales the displayed value by 1/1000. */
+function countTrailingScalingCommas(tokens: FormatToken[]): number {
+  return tokens
+    .filter((token) => token.type === TokenType.FORMAT)
+    .reduce((count, token) => count + (token.value.match(/,+$/)?.[0].length ?? 0), 0)
+}
+
 /* Excel rounds halves away from zero (2.5 -> 3, -2.5 -> -3), unlike JS toFixed which rounds
  * half-to-even on the binary value. Shifting through the decimal string (rather than value * 10**d)
  * avoids re-introducing floating-point noise. ponytail: values >= 1e15 have no meaningful
@@ -214,6 +251,11 @@ function numberFormat(tokens: FormatToken[], value: number): RawScalarValue {
   const percentSigns = countPercentSigns(tokens)
   value = value * 100 ** percentSigns
 
+  /* A comma directly after the last digit placeholder scales the displayed value DOWN by 1000 per
+   * comma (Excel's "display in thousands / millions"), unlike a comma between digits which groups. */
+  const scalingCommas = countTrailingScalingCommas(tokens)
+  value = value / 1000 ** scalingCommas
+
   /* Excel rounds display values to 15 significant digits. Normalising here absorbs binary
    * floating-point noise (e.g. 0.0295 * 100 === 2.9499999999999997) so the per-token rounding
    * below matches Excel (2.95 -> "3.0%" rather than "2.9%"). `value` is finite here: the
@@ -229,8 +271,15 @@ function numberFormat(tokens: FormatToken[], value: number): RawScalarValue {
       continue
     }
 
-    const tokenParts = token.value.split('.')
-    const integerFormat = tokenParts[0]
+    /* Trailing scaling commas were already applied to `value` above; drop them before parsing the
+     * placeholder pattern so they are not mistaken for grouping. */
+    const tokenParts = token.value.replace(/,+$/, '').split('.')
+    /* A `,` between digit placeholders (e.g. `#,##0`) requests thousands grouping. Strip it before
+     * the padding maths (which counts placeholder width) and re-apply grouping to the rendered
+     * integer digits afterwards. */
+    const integerFormatRaw = tokenParts[0]
+    const useGrouping = integerFormatRaw.includes(',')
+    const integerFormat = integerFormatRaw.replace(/,/g, '')
     const decimalFormat = tokenParts[1] || ''
     const separator = tokenParts[1] ? '.' : ''
 
@@ -246,6 +295,10 @@ function numberFormat(tokens: FormatToken[], value: number): RawScalarValue {
 
     const padSizeDecimal = countChars(decimalFormat.substr(decimalPart.length, decimalFormat.length - decimalPart.length), '0')
     decimalPart = padRight(decimalPart, padSizeDecimal + decimalPart.length)
+
+    if (useGrouping) {
+      integerPart = addThousandsSeparators(integerPart)
+    }
 
     result += integerPart + separator + decimalPart
   }

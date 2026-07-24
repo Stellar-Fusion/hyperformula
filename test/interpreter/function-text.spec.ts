@@ -212,7 +212,7 @@ describe('TEXT()', () => {
     expect(engine.getCellValue(adr('A6'))).toEqual('$12.450')
     expect(engine.getCellValue(adr('A7'))).toEqual('012.45.00$')
     expect(engine.getCellValue(adr('A8'))).toEqual('12.45.##$')
-    expect(engine.getCellValue(adr('A9'))).toEqual('$12,##0.00')
+    expect(engine.getCellValue(adr('A9'))).toEqual('$12.45')
   })
 
   it('works with currency format "$#.00"', () => {
