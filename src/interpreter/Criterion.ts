@@ -34,16 +34,20 @@ export class CriterionBuilder {
   }
 
   public fromCellValue(raw: RawScalarValue, arithmeticHelper: ArithmeticHelper): Maybe<CriterionPackage> {
-    if (typeof raw !== 'string' && typeof raw !== 'boolean' && typeof raw !== 'number') {
+    // Excel treats a reference to an EMPTY cell used as a criterion as the number 0 (matching 0-valued
+    // cells), not an error. Without this, SUMIFS/COUNTIFS/etc. with an empty criterion cell return #VALUE!
+    // ("Incorrect criterion") where Excel computes a value.
+    const scalar = raw === EmptyValue ? 0 : raw
+    if (typeof scalar !== 'string' && typeof scalar !== 'boolean' && typeof scalar !== 'number') {
       return undefined
     }
 
-    const criterion = this.parseCriterion(raw, arithmeticHelper)
+    const criterion = this.parseCriterion(scalar, arithmeticHelper)
     if (criterion === undefined) {
       return undefined
     }
 
-    return {raw, lambda: buildCriterionLambda(criterion, arithmeticHelper)}
+    return {raw: scalar, lambda: buildCriterionLambda(criterion, arithmeticHelper)}
   }
 
   public parseCriterion(criterion: RawScalarValue, arithmeticHelper: ArithmeticHelper): Maybe<Criterion> {
