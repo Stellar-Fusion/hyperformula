@@ -124,6 +124,14 @@ export class StatisticalAggregationPlugin extends FunctionPlugin implements Func
         {argumentType: FunctionArgumentType.RANGE},
       ],
     },
+    'FORECAST': {
+      method: 'forecast',
+      parameters: [
+        {argumentType: FunctionArgumentType.NUMBER},
+        {argumentType: FunctionArgumentType.RANGE},
+        {argumentType: FunctionArgumentType.RANGE},
+      ],
+    },
     'CHISQ.TEST': {
       method: 'chisqtest',
       parameters: [
@@ -156,6 +164,7 @@ export class StatisticalAggregationPlugin extends FunctionPlugin implements Func
     },
   }
   public static aliases = {
+    'FORECAST.LINEAR': 'FORECAST',
     COVAR: 'COVARIANCE.P',
     FTEST: 'F.TEST',
     PEARSON: 'CORREL',
@@ -428,6 +437,34 @@ export class StatisticalAggregationPlugin extends FunctionPlugin implements Func
         }
         const slope = (covariance(ret[0], ret[1]) * (n - 1)) / sumsqerr(ret[1])
         return mean(ret[0]) - slope * mean(ret[1])
+      })
+  }
+
+  public forecast(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('FORECAST'),
+      (x: number, knownYs: SimpleRangeValue, knownXs: SimpleRangeValue) => {
+        if (knownYs.numberOfElements() !== knownXs.numberOfElements()) {
+          return new CellError(ErrorType.NA, ErrorMessage.EqualLength)
+        }
+
+        const ret = parseTwoArrays(knownYs, knownXs)
+        if (ret instanceof CellError) {
+          return ret
+        }
+        const n = ret[0].length
+        if (n <= 1) {
+          return new CellError(ErrorType.DIV_BY_ZERO, ErrorMessage.TwoValues)
+        }
+        if (sumsqerr(ret[1]) === 0) {
+          return new CellError(ErrorType.DIV_BY_ZERO)
+        }
+        // Mean-centred form, matching how Excel documents FORECAST: mean(y) + slope * (x - mean(x)).
+        // Algebraically equal to intercept + slope * x but not numerically, so keep this ordering.
+        // Residual vs Excel's cached values is ~1e-14 relative (jstat accumulation order); chasing
+        // last-bit parity is a known dead end for a separate engine, and the engine's smartRounding
+        // rounds to 10 significant digits downstream regardless.
+        const slope = (covariance(ret[0], ret[1]) * (n - 1)) / sumsqerr(ret[1])
+        return mean(ret[0]) + slope * (x - mean(ret[1]))
       })
   }
 

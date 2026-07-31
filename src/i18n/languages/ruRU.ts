@@ -395,6 +395,8 @@ const dictionary: RawTranslationPackage = {
     STEYX: 'СТОШYX',
     SLOPE: 'НАКЛОН',
     INTERCEPT: 'INTERCEPT',
+    FORECAST: 'FORECAST',
+    'FORECAST.LINEAR': 'FORECAST.LINEAR',
     COVAR: 'КОВАР',
     'COVARIANCE.P': 'КОВАРИАЦИЯ.Г',
     'COVARIANCE.S': 'КОВАРИАЦИЯ.В',

@@ -398,6 +398,8 @@ const dictionary: RawTranslationPackage = {
     STEYX: 'STEYX',
     SLOPE: 'SLOPE',
     INTERCEPT: 'INTERCEPT',
+    FORECAST: 'FORECAST',
+    'FORECAST.LINEAR': 'FORECAST.LINEAR',
     'CHISQ.TEST': 'CHISQ.TEST',
     CHITEST: 'CHITEST',
     'T.TEST': 'T.TEST',
