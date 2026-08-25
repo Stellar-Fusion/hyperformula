@@ -152,3 +152,42 @@ describe('Function EOMONTH', () => {
     expect(engine.getCellValue(adr('A3'))).toEqualError(detailedError(ErrorType.DIV_BY_ZERO))
   })
 })
+
+describe('Function EOMONTH, 31 December serials', () => {
+  // JMKE (Evercore, prod): Model!DW5 holds 2036-12-31 (serial 50040) and Model!DV5 = EOMONTH(DW5, -3).
+  // Excel caches 2036-09-30 = serial 49948; the year-estimation overshoot in numberToSimpleDate decoded
+  // 50040 as the impossible 2037-01-00, so we walked back from January and returned 2036-10-31 = 49979,
+  // a month late, which then skewed every quarter derived from it.
+  const excelConfig = {leapYear1900: true, nullDate: {year: 1899, month: 12, day: 31}}
+
+  it('walks back from December, not January, for 2036-12-31', () => {
+    const engine = HyperFormula.buildFromArray([
+      ['=DATE(2036, 12, 31)'],
+      ['=EOMONTH(A1, -3)'],
+    ], excelConfig)
+
+    expect(engine.getCellValue(adr('A1'))).toEqual(50040)
+    expect(engine.getCellValue(adr('A2'))).toEqual(49948)
+  })
+
+  it('is correct for the other 31 December serials the year estimate overshoots', () => {
+    const engine = HyperFormula.buildFromArray([
+      ['=DATE(2040, 12, 31)', '=EOMONTH(A1, -3)'],
+      ['=DATE(2044, 12, 31)', '=EOMONTH(A2, -3)'],
+      ['=DATE(2069, 12, 31)', '=EOMONTH(A3, -3)'],
+    ], excelConfig)
+
+    expect(engine.getCellValue(adr('B1'))).toEqual(51409)
+    expect(engine.getCellValue(adr('B2'))).toEqual(52870)
+    expect(engine.getCellValue(adr('B3'))).toEqual(62001)
+  })
+
+  it('leaves EOMONTH on an unaffected serial alone', () => {
+    const engine = HyperFormula.buildFromArray([
+      ['=DATE(2035, 12, 31)'],
+      ['=EOMONTH(A1, -3)'],
+    ], excelConfig)
+
+    expect(engine.getCellValue(adr('A2'))).toEqual(49582)
+  })
+})

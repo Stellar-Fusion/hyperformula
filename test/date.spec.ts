@@ -196,6 +196,39 @@ describe('Date helpers', () => {
   })
 })
 
+describe('Date helpers, year estimation overshoot', () => {
+  // numberToSimpleDate estimates the year with dateNumber / 365.2425, which can overshoot by one for a
+  // 31 December. The correction must detect that; otherwise the wrong year yields a negative day-of-year
+  // and an impossible date such as 2037-01-00, which then drifts EOMONTH/EDATE by a whole month.
+  const excelConfig = new Config({leapYear1900: true, nullDate: {year: 1899, month: 12, day: 31}})
+
+  it('#numberToSimpleDate decodes the 31 December serials the estimate overshoots', () => {
+    const dateHelper = new DateTimeHelper(excelConfig)
+
+    expect(dateHelper.numberToSimpleDate(50040)).toEqual({year: 2036, month: 12, day: 31})
+    expect(dateHelper.numberToSimpleDate(51501)).toEqual({year: 2040, month: 12, day: 31})
+    expect(dateHelper.numberToSimpleDate(52962)).toEqual({year: 2044, month: 12, day: 31})
+    expect(dateHelper.numberToSimpleDate(62093)).toEqual({year: 2069, month: 12, day: 31})
+  })
+
+  it('#numberToSimpleDate round-trips every 31 December from 1900 to 2200', () => {
+    const dateHelper = new DateTimeHelper(excelConfig)
+
+    for (let year = 1900; year <= 2200; year++) {
+      const date: SimpleDate = {year, month: 12, day: 31}
+      expect(dateHelper.numberToSimpleDate(dateHelper.dateToNumber(date))).toEqual(date)
+    }
+  })
+
+  it('#numberToSimpleDate round-trips every serial across three centuries', () => {
+    const dateHelper = new DateTimeHelper(excelConfig)
+
+    for (let serial = 61; serial <= 100000; serial++) {
+      expect(dateHelper.dateToNumber(dateHelper.numberToSimpleDate(serial))).toEqual(serial)
+    }
+  })
+})
+
 describe('Date helpers, other zero date', () => {
   it('#dateToNumber should return number representation of a date, different zero date', () => {
     const dateHelper = new DateTimeHelper(new Config({nullDate: {year: 1950, month: 6, day: 15}}))
