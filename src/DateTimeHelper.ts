@@ -139,9 +139,14 @@ export class DateTimeHelper {
   public numberToSimpleDate(arg: number): SimpleDate {
     const dateNumber = Math.floor(arg) + this.minDateAbsoluteValue
     let year = Math.floor(dateNumber / 365.2425)
+    // The estimate above is off by at most one year in either direction. It overshoots when dateNumber
+    // sits just below a year boundary — a 31 December — so the test for decrementing is whether the
+    // ESTIMATED year starts after the date. Testing year - 1 only fires when the estimate is two years
+    // high, which never happens, so an overshoot used to survive and produce a negative day-of-year
+    // (2036-12-31 decoded as 2037-01-00, drifting EOMONTH/EDATE by a whole month).
     if (this.dateToNumberFromZero({year: year + 1, month: 1, day: 1}) <= dateNumber) {
       year++
-    } else if (this.dateToNumberFromZero({year: year - 1, month: 1, day: 1}) > dateNumber) {
+    } else if (this.dateToNumberFromZero({year, month: 1, day: 1}) > dateNumber) {
       year--
     }
 
