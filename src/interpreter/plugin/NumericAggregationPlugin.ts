@@ -4,7 +4,7 @@
  */
 
 import {AbsoluteCellRange} from '../../AbsoluteCellRange'
-import {CellError, ErrorType} from '../../Cell'
+import {CellError, ErrorType, SimpleCellAddress} from '../../Cell'
 import {ErrorMessage} from '../../error-message'
 import {SheetsNotEqual} from '../../errors'
 import {Maybe} from '../../Maybe'
@@ -15,7 +15,7 @@ import {InterpreterState} from '../InterpreterState'
 import {EmptyValue, ExtendedNumber, getRawValue, InternalScalarValue, isExtendedNumber} from '../InterpreterValue'
 import {SimpleRangeValue} from '../../SimpleRangeValue'
 import {FunctionArgumentType, FunctionPlugin, FunctionPluginTypecheck, ImplementedFunctions} from './FunctionPlugin'
-import {RangeVertex} from '../../DependencyGraph'
+import {ArrayVertex, FormulaCellVertex, RangeVertex} from '../../DependencyGraph'
 
 export type BinaryOperation<T> = (left: T, right: T) => T
 
@@ -29,6 +29,65 @@ function zeroForInfinite(value: InternalScalarValue) {
   } else {
     return value
   }
+}
+
+/**
+ * Functions whose cells Excel skips when they sit inside a SUBTOTAL's references.
+ */
+const NESTED_SUBTOTAL_FUNCTIONS = new Set(['SUBTOTAL', 'AGGREGATE'])
+
+/**
+ * Prefix for the range cache of a SUBTOTAL-style reduction. It skips cells a plain reduction counts, so
+ * the two must never share a cached value for the same range.
+ */
+const NESTED_SUBTOTALS_IGNORED_CACHE_PREFIX = 'SUBTOTAL_'
+
+const containsSubtotalCache = new WeakMap<Ast, boolean>()
+
+/**
+ * Whether a formula calls SUBTOTAL or AGGREGATE anywhere in it. Excel, LibreOffice and the ODFF standard
+ * treat any such cell as a subtotal, not only one whose whole formula is the call.
+ */
+function containsSubtotal(ast: Ast): boolean {
+  const cached = containsSubtotalCache.get(ast)
+  if (cached !== undefined) {
+    return cached
+  }
+
+  let result = false
+  switch (ast.type) {
+    case AstNodeType.FUNCTION_CALL:
+      result = NESTED_SUBTOTAL_FUNCTIONS.has(ast.procedureName) || ast.args.some(containsSubtotal)
+      break
+    case AstNodeType.ARRAY:
+      result = ast.args.some(row => row.some(containsSubtotal))
+      break
+    case AstNodeType.PARENTHESIS:
+      result = containsSubtotal(ast.expression)
+      break
+    case AstNodeType.MINUS_UNARY_OP:
+    case AstNodeType.PLUS_UNARY_OP:
+    case AstNodeType.PERCENT_OP:
+      result = containsSubtotal(ast.value)
+      break
+    case AstNodeType.CONCATENATE_OP:
+    case AstNodeType.EQUALS_OP:
+    case AstNodeType.NOT_EQUAL_OP:
+    case AstNodeType.GREATER_THAN_OP:
+    case AstNodeType.LESS_THAN_OP:
+    case AstNodeType.GREATER_THAN_OR_EQUAL_OP:
+    case AstNodeType.LESS_THAN_OR_EQUAL_OP:
+    case AstNodeType.PLUS_OP:
+    case AstNodeType.MINUS_OP:
+    case AstNodeType.TIMES_OP:
+    case AstNodeType.DIV_OP:
+    case AstNodeType.POWER_OP:
+      result = containsSubtotal(ast.left) || containsSubtotal(ast.right)
+      break
+  }
+
+  containsSubtotalCache.set(ast, result)
+  return result
 }
 
 class MomentsAggregate {
@@ -373,6 +432,13 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
     return this.doProduct(ast.args, state)
   }
 
+  /**
+   * Corresponds to SUBTOTAL(function_num, ref1, [ref2], ...)
+   *
+   * Cells that themselves contain SUBTOTAL or AGGREGATE are skipped, so a grand total over a column that
+   * already holds section subtotals does not count them twice. Codes 101-111 behave like 1-11: the engine
+   * has no notion of hidden rows.
+   */
   public subtotal(ast: ProcedureAst, state: InterpreterState): InternalScalarValue {
     if (ast.args.length < 2) {
       return new CellError(ErrorType.NA, ErrorMessage.WrongArgNumber)
@@ -382,49 +448,50 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
     switch (functionType) {
       case 1:
       case 101:
-        return this.doAverage(args, state)
+        return this.doAverage(args, state, true)
       case 2:
       case 102:
-        return this.doCount(args, state)
+        return this.doCount(args, state, true)
       case 3:
       case 103:
-        return this.doCounta(args, state)
+        return this.doCounta(args, state, true)
       case 4:
       case 104:
-        return this.doMax(args, state)
+        return this.doMax(args, state, true)
       case 5:
       case 105:
-        return this.doMin(args, state)
+        return this.doMin(args, state, true)
       case 6:
       case 106:
-        return this.doProduct(args, state)
+        return this.doProduct(args, state, true)
       case 7:
       case 107:
-        return this.doStdevS(args, state)
+        return this.doStdevS(args, state, true)
       case 8:
       case 108:
-        return this.doStdevP(args, state)
+        return this.doStdevP(args, state, true)
       case 9:
       case 109:
-        return this.doSum(args, state)
+        return this.doSum(args, state, true)
       case 10:
       case 110:
-        return this.doVarS(args, state)
+        return this.doVarS(args, state, true)
       case 11:
       case 111:
-        return this.doVarP(args, state)
+        return this.doVarP(args, state, true)
       default:
         return new CellError(ErrorType.VALUE, ErrorMessage.BadMode)
     }
   }
 
-  private reduceAggregate(args: Ast[], state: InterpreterState): MomentsAggregate | CellError {
+  private reduceAggregate(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): MomentsAggregate | CellError {
     return this.reduce<MomentsAggregate>(args, state, MomentsAggregate.empty, '_AGGREGATE', (left, right) => {
         return left.compose(right)
       }, (arg): MomentsAggregate => {
         return MomentsAggregate.single(getRawValue(arg))
       },
-      strictlyNumbers
+      strictlyNumbers,
+      ignoreNestedSubtotals
     )
   }
 
@@ -438,8 +505,8 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
     )
   }
 
-  private doAverage(args: Ast[], state: InterpreterState): InternalScalarValue {
-    const result = this.reduceAggregate(args, state)
+  private doAverage(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
+    const result = this.reduceAggregate(args, state, ignoreNestedSubtotals)
 
     if (result instanceof CellError) {
       return result
@@ -448,8 +515,8 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
     }
   }
 
-  private doVarS(args: Ast[], state: InterpreterState): InternalScalarValue {
-    const result = this.reduceAggregate(args, state)
+  private doVarS(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
+    const result = this.reduceAggregate(args, state, ignoreNestedSubtotals)
 
     if (result instanceof CellError) {
       return result
@@ -458,8 +525,8 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
     }
   }
 
-  private doVarP(args: Ast[], state: InterpreterState): InternalScalarValue {
-    const result = this.reduceAggregate(args, state)
+  private doVarP(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
+    const result = this.reduceAggregate(args, state, ignoreNestedSubtotals)
 
     if (result instanceof CellError) {
       return result
@@ -468,8 +535,8 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
     }
   }
 
-  private doStdevS(args: Ast[], state: InterpreterState): InternalScalarValue {
-    const result = this.reduceAggregate(args, state)
+  private doStdevS(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
+    const result = this.reduceAggregate(args, state, ignoreNestedSubtotals)
 
     if (result instanceof CellError) {
       return result
@@ -479,8 +546,8 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
     }
   }
 
-  private doStdevP(args: Ast[], state: InterpreterState): InternalScalarValue {
-    const result = this.reduceAggregate(args, state)
+  private doStdevP(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
+    const result = this.reduceAggregate(args, state, ignoreNestedSubtotals)
 
     if (result instanceof CellError) {
       return result
@@ -490,45 +557,47 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
     }
   }
 
-  private doCount(args: Ast[], state: InterpreterState): InternalScalarValue {
+  private doCount(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
     return this.reduce(args, state, 0, 'COUNT',
       (left: number, right: number) => left + right,
       getRawValue,
-      (arg) => (isExtendedNumber(arg)) ? 1 : 0
+      (arg) => (isExtendedNumber(arg)) ? 1 : 0,
+      ignoreNestedSubtotals
     )
   }
 
-  private doCounta(args: Ast[], state: InterpreterState): InternalScalarValue {
+  private doCounta(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
     return this.reduce(args, state, 0, 'COUNTA', (left: number, right: number) => left + right,
       getRawValue,
-      (arg) => (arg === EmptyValue) ? 0 : 1
+      (arg) => (arg === EmptyValue) ? 0 : 1,
+      ignoreNestedSubtotals
     )
   }
 
-  private doMax(args: Ast[], state: InterpreterState): InternalScalarValue {
+  private doMax(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
     const value = this.reduce(args, state, Number.NEGATIVE_INFINITY, 'MAX',
       (left: number, right: number) => Math.max(left, right),
-      getRawValue, strictlyNumbers
+      getRawValue, strictlyNumbers, ignoreNestedSubtotals
     )
 
     return zeroForInfinite(value)
   }
 
-  private doMin(args: Ast[], state: InterpreterState): InternalScalarValue {
+  private doMin(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
     const value = this.reduce(args, state, Number.POSITIVE_INFINITY, 'MIN',
       (left: number, right: number) => Math.min(left, right),
-      getRawValue, strictlyNumbers
+      getRawValue, strictlyNumbers, ignoreNestedSubtotals
     )
 
     return zeroForInfinite(value)
   }
 
-  private doSum(args: Ast[], state: InterpreterState): InternalScalarValue {
-    return this.reduce(args, state, 0, 'SUM', this.addWithEpsilonRaw, getRawValue, strictlyNumbers)
+  private doSum(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
+    return this.reduce(args, state, 0, 'SUM', this.addWithEpsilonRaw, getRawValue, strictlyNumbers, ignoreNestedSubtotals)
   }
 
-  private doProduct(args: Ast[], state: InterpreterState): InternalScalarValue {
-    return this.reduce(args, state, 1, 'PRODUCT', (left, right) => left * right, getRawValue, strictlyNumbers)
+  private doProduct(args: Ast[], state: InterpreterState, ignoreNestedSubtotals: boolean = false): InternalScalarValue {
+    return this.reduce(args, state, 1, 'PRODUCT', (left, right) => left * right, getRawValue, strictlyNumbers, ignoreNestedSubtotals)
   }
 
   private addWithEpsilonRaw = (left: number, right: number) => this.arithmeticHelper.addWithEpsilonRaw(left, right)
@@ -543,8 +612,9 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
    * @param reducingFunction - reducing function
    * @param mapFunction
    * @param coercionFunction
+   * @param ignoreNestedSubtotals - skip referenced cells that contain SUBTOTAL or AGGREGATE
    */
-  private reduce<T>(args: Ast[], state: InterpreterState, initialAccValue: T, functionName: string, reducingFunction: BinaryOperation<T>, mapFunction: MapOperation<T>, coercionFunction: coercionOperation): CellError | T {
+  private reduce<T>(args: Ast[], state: InterpreterState, initialAccValue: T, functionName: string, reducingFunction: BinaryOperation<T>, mapFunction: MapOperation<T>, coercionFunction: coercionOperation, ignoreNestedSubtotals: boolean = false): CellError | T {
     if (args.length < 1) {
       return new CellError(ErrorType.NA, ErrorMessage.WrongArgNumber)
     }
@@ -554,11 +624,15 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
       }
 
       if (arg.type === AstNodeType.CELL_RANGE || arg.type === AstNodeType.COLUMN_RANGE || arg.type === AstNodeType.ROW_RANGE) {
-        const val = this.evaluateRange(arg, state, initialAccValue, functionName, reducingFunction, mapFunction, coercionFunction)
+        const val = this.evaluateRange(arg, state, initialAccValue, functionName, reducingFunction, mapFunction, coercionFunction, ignoreNestedSubtotals)
         if (val instanceof CellError) {
           return val
         }
         return reducingFunction(val, acc)
+      }
+
+      if (ignoreNestedSubtotals && arg.type === AstNodeType.CELL_REFERENCE && this.isSubtotalCell(arg.reference.toSimpleCellAddress(state.formulaAddress))) {
+        return acc
       }
 
       let value
@@ -616,8 +690,9 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
    * @param reducingFunction - reducing function
    * @param mapFunction
    * @param coercionFunction
+   * @param ignoreNestedSubtotals - skip cells that contain SUBTOTAL or AGGREGATE
    */
-  private evaluateRange<T>(ast: CellRangeAst | ColumnRangeAst | RowRangeAst, state: InterpreterState, initialAccValue: T, functionName: string, reducingFunction: BinaryOperation<T>, mapFunction: MapOperation<T>, coercionFunction: coercionOperation): T | CellError {
+  private evaluateRange<T>(ast: CellRangeAst | ColumnRangeAst | RowRangeAst, state: InterpreterState, initialAccValue: T, functionName: string, reducingFunction: BinaryOperation<T>, mapFunction: MapOperation<T>, coercionFunction: coercionOperation, ignoreNestedSubtotals: boolean = false): T | CellError {
     let range
     try {
       range = AbsoluteCellRange.fromAst(ast, state.formulaAddress)
@@ -635,9 +710,10 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
       throw new Error('Range does not exists in graph')
     }
 
-    let value = rangeVertex.getFunctionValue(functionName) as (T | CellError | undefined)
+    const cacheKey = ignoreNestedSubtotals ? NESTED_SUBTOTALS_IGNORED_CACHE_PREFIX + functionName : functionName
+    let value = rangeVertex.getFunctionValue(cacheKey) as (T | CellError | undefined)
     if (value === undefined) {
-      const rangeValues = this.getRangeValues(functionName, range, rangeVertex, mapFunction, coercionFunction)
+      const rangeValues = this.getRangeValues(cacheKey, range, rangeVertex, mapFunction, coercionFunction, ignoreNestedSubtotals)
       value = rangeValues.reduce((arg1, arg2) => {
         if (arg1 instanceof CellError) {
           return arg1
@@ -647,7 +723,7 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
           return reducingFunction(arg1, arg2)
         }
       }, initialAccValue)
-      rangeVertex.setFunctionValue(functionName, value)
+      rangeVertex.setFunctionValue(cacheKey, value)
     }
 
     return value
@@ -664,8 +740,9 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
    * @param rangeVertex
    * @param mapFunction
    * @param coercionFunction
+   * @param ignoreNestedSubtotals - skip cells that contain SUBTOTAL or AGGREGATE
    */
-  private getRangeValues<T>(functionName: string, range: AbsoluteCellRange, rangeVertex: RangeVertex, mapFunction: MapOperation<T>, coercionFunction: coercionOperation): (T | CellError)[] {
+  private getRangeValues<T>(functionName: string, range: AbsoluteCellRange, rangeVertex: RangeVertex, mapFunction: MapOperation<T>, coercionFunction: coercionOperation, ignoreNestedSubtotals: boolean = false): (T | CellError)[] {
     const rangeResult: (T | CellError)[] = []
     const {smallerRangeVertex, restRange} = this.dependencyGraph.rangeMapping.findSmallerRange(range)
     let actualRange: AbsoluteCellRange
@@ -675,6 +752,9 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
         rangeResult.push(cachedValue)
       } else {
         for (const cellFromRange of smallerRangeVertex.range.addresses(this.dependencyGraph)) {
+          if (ignoreNestedSubtotals && this.isSubtotalCell(cellFromRange)) {
+            continue
+          }
           const val = coercionFunction(this.dependencyGraph.getScalarValue(cellFromRange))
           if (val instanceof CellError) {
             rangeResult.push(val)
@@ -688,6 +768,9 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
       actualRange = range
     }
     for (const cellFromRange of actualRange.addresses(this.dependencyGraph)) {
+      if (ignoreNestedSubtotals && this.isSubtotalCell(cellFromRange)) {
+        continue
+      }
       const val = coercionFunction(this.dependencyGraph.getScalarValue(cellFromRange))
       if (val instanceof CellError) {
         rangeResult.push(val)
@@ -697,6 +780,20 @@ export class NumericAggregationPlugin extends FunctionPlugin implements Function
     }
 
     return rangeResult
+  }
+
+  /**
+   * Whether the cell at the given address holds a formula that calls SUBTOTAL or AGGREGATE.
+   *
+   * @param address - cell address
+   */
+  private isSubtotalCell(address: SimpleCellAddress): boolean {
+    const vertex = this.dependencyGraph.getCell(address)
+    if (!(vertex instanceof FormulaCellVertex) && !(vertex instanceof ArrayVertex)) {
+      return false
+    }
+
+    return containsSubtotal(vertex.getFormula(this.dependencyGraph.lazilyTransformingAstService))
   }
 }
 
