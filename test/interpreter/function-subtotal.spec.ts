@@ -158,16 +158,126 @@ describe('Function SUBTOTAL', () => {
     expect(engine.getCellValue(adr('A1'))).toEqualError(detailedError(ErrorType.VALUE, ErrorMessage.BadMode))
   })
 
-  /**
-   * Inconsistency with ODFF standard.
+  /*
+   * Excel, LibreOffice and the ODFF standard all skip cells that themselves contain SUBTOTAL, so a
+   * grand total over a column that already holds section subtotals does not count them twice.
    */
-  it('does not ignore other SUBTOTALS', () => {
+  it('ignores other SUBTOTALs inside the range', () => {
     const engine = HyperFormula.buildFromArray([
       ['=SUBTOTAL(9, A2:A4)'],
       ['=SUBTOTAL(9, B2:C2)', 1, 1],
       ['=SUBTOTAL(9, B3:C3)', 1, 1],
       ['=SUBTOTAL(9, B4:C4)', 1, 1],
     ])
-    expect(engine.getCellValue(adr('A1'))).toEqual(6)
+    expect(engine.getCellValue(adr('A1'))).toEqual(0)
+  })
+
+  it('totals a statement column without double counting its section subtotal', () => {
+    const engine = HyperFormula.buildFromArray([
+      [21632],
+      [708],
+      [24082],
+      ['=SUBTOTAL(9, A1:A3)'],
+      [93272],
+      [119701],
+      ['=SUBTOTAL(9, A1:A6)'],
+    ])
+
+    expect(engine.getCellValue(adr('A4'))).toEqual(46422)
+    expect(engine.getCellValue(adr('A7'))).toEqual(259395)
+  })
+
+  it('still counts a plain SUM cell inside the range', () => {
+    const engine = HyperFormula.buildFromArray([
+      [1],
+      [2],
+      ['=SUM(A1:A2)'],
+      ['=SUBTOTAL(9, A1:A3)'],
+    ])
+
+    expect(engine.getCellValue(adr('A4'))).toEqual(6)
+  })
+
+  it('ignores a cell whose formula only contains a SUBTOTAL somewhere inside it', () => {
+    const engine = HyperFormula.buildFromArray([
+      [1],
+      [2],
+      ['=-(SUBTOTAL(9, A1:A2)*2)+100'],
+      ['=SUBTOTAL(9, A1:A3)'],
+    ])
+
+    expect(engine.getCellValue(adr('A3'))).toEqual(94)
+    expect(engine.getCellValue(adr('A4'))).toEqual(3)
+  })
+
+  it('ignores a nested SUBTOTAL referenced as a single cell', () => {
+    const engine = HyperFormula.buildFromArray([
+      [1],
+      [2],
+      ['=SUBTOTAL(9, A1:A2)'],
+      ['=SUBTOTAL(9, A1, A2, A3)'],
+    ])
+
+    expect(engine.getCellValue(adr('A4'))).toEqual(3)
+  })
+
+  it('applies to every function code, not just SUM', () => {
+    const engine = HyperFormula.buildFromArray([
+      [2],
+      [4],
+      ['=SUBTOTAL(9, A1:A2)'],
+      ['=SUBTOTAL(1, A1:A3)', '=SUBTOTAL(2, A1:A3)', '=SUBTOTAL(3, A1:A3)', '=SUBTOTAL(4, A1:A3)', '=SUBTOTAL(106, A1:A3)'],
+    ])
+
+    expect(engine.getCellValue(adr('A4'))).toEqual(3)
+    expect(engine.getCellValue(adr('B4'))).toEqual(2)
+    expect(engine.getCellValue(adr('C4'))).toEqual(2)
+    expect(engine.getCellValue(adr('D4'))).toEqual(4)
+    expect(engine.getCellValue(adr('E4'))).toEqual(8)
+  })
+
+  it('does not share a cached range result with SUM over the same range, in either order', () => {
+    const sumFirst = HyperFormula.buildFromArray([
+      [1, '=SUM(A1:A3)', '=SUBTOTAL(9, A1:A3)'],
+      [2],
+      ['=SUBTOTAL(9, A1:A2)'],
+    ])
+    const subtotalFirst = HyperFormula.buildFromArray([
+      [1, '=SUBTOTAL(9, A1:A3)', '=SUM(A1:A3)'],
+      [2],
+      ['=SUBTOTAL(9, A1:A2)'],
+    ])
+
+    expect(sumFirst.getCellValue(adr('B1'))).toEqual(6)
+    expect(sumFirst.getCellValue(adr('C1'))).toEqual(3)
+    expect(subtotalFirst.getCellValue(adr('B1'))).toEqual(3)
+    expect(subtotalFirst.getCellValue(adr('C1'))).toEqual(6)
+  })
+
+  it('reuses a smaller range correctly when ranges grow row by row', () => {
+    const engine = HyperFormula.buildFromArray([
+      [1, '=SUBTOTAL(9, A$1:A1)'],
+      [2, '=SUBTOTAL(9, A$1:A2)'],
+      ['=SUBTOTAL(9, A1:A2)', '=SUBTOTAL(9, A$1:A3)'],
+      [4, '=SUBTOTAL(9, A$1:A4)'],
+    ])
+
+    expect(engine.getCellValue(adr('B3'))).toEqual(3)
+    expect(engine.getCellValue(adr('B4'))).toEqual(7)
+  })
+
+  it('recomputes when a cell inside the range becomes, or stops being, a SUBTOTAL', () => {
+    const engine = HyperFormula.buildFromArray([
+      [1],
+      [2],
+      ['=SUBTOTAL(9, A1:A2)'],
+      ['=SUBTOTAL(9, A1:A3)'],
+    ])
+
+    engine.setCellContents(adr('A3'), '=SUM(A1:A2)')
+    expect(engine.getCellValue(adr('A4'))).toEqual(6)
+
+    engine.setCellContents(adr('A3'), '=SUBTOTAL(9, A1:A2)')
+    expect(engine.getCellValue(adr('A4'))).toEqual(3)
   })
 })
