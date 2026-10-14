@@ -1,0 +1,5 @@
+# Upstream handsontable/hyperformula test fixtures, not Stellar Fusion secrets: an expired HyperFormula
+# licence key used to test expired-key handling (commit e97207a9, June 2020, public upstream since then).
+# Found by the full-history scan on 2026-10-14.
+e97207a9115a756414972bc59cf8a00846e0ea88:test/helpers/licenseKeyValidator.spec.ts:generic-api-key:62
+e97207a9115a756414972bc59cf8a00846e0ea88:test/interpreter/function-version.spec.ts:generic-api-key:53
