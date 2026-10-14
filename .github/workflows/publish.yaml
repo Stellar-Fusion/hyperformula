@@ -15,7 +15,13 @@ on:
   push:
     branches:
       - master
-      
+    # A push touching only CI config or docs leaves the package unchanged, so publishing it again only
+    # fails with 409 "Cannot publish over existing version". Mixed pushes still publish.
+    paths-ignore:
+      - ".github/**"
+      - ".gitleaksignore"
+      - "**/*.md"
+
 permissions:
   packages: write
   id-token: write
