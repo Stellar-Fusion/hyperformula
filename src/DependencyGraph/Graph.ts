@@ -247,12 +247,12 @@ export class Graph<Node> {
    *
    * @param modifiedNodes - seed for computation. The algorithm assumes that only these nodes have changed since the last run.
    * @param operatingFunction - recomputes value of a node, and returns whether a change occurred
-   * @param onCycle - action to be performed when node is on cycle
+   * @param onCycle - action to be performed on each cycle (all nodes of one SCC), called in topological order
    */
   public getTopSortedWithSccSubgraphFrom(
     modifiedNodes: Node[],
     operatingFunction: (node: Node) => boolean,
-    onCycle: (node: Node) => void
+    onCycle: (cycle: Node[]) => void
   ): TopSortResult<Node> {
     const topSortAlgorithm = new TopSort<Node>(this.nodesSparseArray, this.edgesSparseArray)
     const modifiedNodesIds = modifiedNodes.map(node => this.getNodeId(node)).filter(id => id !== undefined) as NodeId[]

@@ -26,6 +26,8 @@ export class TopSort<T> {
   private nodeStatus: NodeVisitStatus[] = []
   private order: number[] = []
   private sccNonSingletons: boolean[] = []
+  private sccIds: number[] = []
+  private sccCounter: number = 0
   private timeCounter: number = 0
 
   constructor(
@@ -40,12 +42,12 @@ export class TopSort<T> {
    *
    * @param modifiedNodes - seed for computation. During engine init run, all of the vertices of grap. In recomputation run, changed vertices.
    * @param operatingFunction - recomputes value of a node, and returns whether a change occurred
-   * @param onCycle - action to be performed when node is on cycle
+   * @param onCycle - action to be performed on each cycle (all nodes of one SCC), called in topological order
    */
   public getTopSortedWithSccSubgraphFrom(
     modifiedNodeIds: number[],
     operatingFunction: (node: T) => boolean,
-    onCycle: (node: T) => void
+    onCycle: (cycle: T[]) => void
   ): TopSortResult<T> {
     const modifiedNodeIdsReversed = modifiedNodeIds.reverse()
     modifiedNodeIdsReversed.forEach((id: number) => this.runDFS(id))
@@ -135,8 +137,10 @@ export class TopSort<T> {
         SCCstack.pop()
       } while (currentSCC[currentSCC.length - 1] !== u)
 
+      const sccId = this.sccCounter++
       currentSCC.forEach((t) => {
         this.inSCC[t] = true
+        this.sccIds[t] = sccId
       })
 
       this.order.push(...currentSCC)
@@ -155,7 +159,7 @@ export class TopSort<T> {
   /**
    * Postprocesses the result of Tarjan's algorithm.
    */
-  private postprocess(modifiedNodeIds: number[], onCycle: (node: T) => void, operatingFunction: (node: T) => boolean) {
+  private postprocess(modifiedNodeIds: number[], onCycle: (cycle: T[]) => void, operatingFunction: (node: T) => boolean) {
     const shouldBeUpdatedMapping: boolean[] = []
 
     modifiedNodeIds.forEach((t: number) => {
@@ -164,15 +168,23 @@ export class TopSort<T> {
 
     const sorted: T[] = []
     const cycled: T[] = []
+    let currentCycle: T[] = []
     this.order.reverse()
 
-    this.order.forEach((t: number) => {
+    this.order.forEach((t: number, index: number) => {
       const adjacentNodes = this.getAdjacentNodeIds(t)
 
       if (this.sccNonSingletons[t] || this.edgesSparseArray[t].has(t)) {
         cycled.push(this.nodesSparseArray[t])
-        onCycle(this.nodesSparseArray[t])
+        currentCycle.push(this.nodesSparseArray[t])
         adjacentNodes.forEach((s: number) => shouldBeUpdatedMapping[s] = true)
+
+        // Tarjan emits each SCC contiguously, so the SCC is complete once the next node belongs to another one.
+        const nextNode = this.order[index + 1]
+        if (nextNode === undefined || this.sccIds[nextNode] !== this.sccIds[t]) {
+          onCycle(currentCycle)
+          currentCycle = []
+        }
       } else {
         sorted.push(this.nodesSparseArray[t])
         if (shouldBeUpdatedMapping[t] && operatingFunction(this.nodesSparseArray[t])) {

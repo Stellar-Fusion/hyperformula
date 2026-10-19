@@ -436,7 +436,7 @@ describe('Graph class', () => {
       expect(operatingFunction.calls.argsFor(2)).toContain(nodes[2])
     })
 
-    it('calls onCycle callback for nodes that are on cycle', () => {
+    it('calls onCycle callback once with all nodes of the cycle', () => {
       const graph = new Graph<string>(dummyDependencyQuery)
       const nodes = ['foo', 'c0', 'c1', 'c2']
 
@@ -451,8 +451,38 @@ describe('Graph class', () => {
       const cycled = graph.getTopSortedWithSccSubgraphFrom([nodes[0]], operatingFunction, onCycle).cycled
 
       expect(operatingFunction).toHaveBeenCalledTimes(1)
-      expect(onCycle).toHaveBeenCalledTimes(3)
+      expect(onCycle).toHaveBeenCalledTimes(1)
+      expect(onCycle).toHaveBeenCalledWith(['c0', 'c1', 'c2'])
       expect(cycled).toEqual(['c0', 'c1', 'c2'])
+    })
+
+    // The evaluator solves each cycle when onCycle fires, so a cycle that depends on another (here
+    // through the non-cyclic 'link') must be reported separately and only after the one it reads from.
+    it('calls onCycle callback separately for each cycle, in topological order', () => {
+      const graph = new Graph<string>(dummyDependencyQuery)
+      const nodes = ['a0', 'a1', 'link', 'b0', 'b1']
+
+      nodes.forEach((n) => graph.addNodeAndReturnId(n))
+      graph.addEdge('a0', 'a1')
+      graph.addEdge('a1', 'a0')
+      graph.addEdge('a1', 'link')
+      graph.addEdge('link', 'b0')
+      graph.addEdge('b0', 'b1')
+      graph.addEdge('b1', 'b0')
+
+      const callOrder: string[] = []
+      graph.getTopSortedWithSccSubgraphFrom(
+        ['a0'],
+        (node) => {
+          callOrder.push(node)
+          return true
+        },
+        (cycle) => {
+          callOrder.push(`[${[...cycle].sort().join(',')}]`)
+        },
+      )
+
+      expect(callOrder).toEqual(['[a0,a1]', 'link', '[b0,b1]'])
     })
 
     it('does not call operatingFunction callback for nodes that are on cycle', () => {
