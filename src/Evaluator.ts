@@ -42,7 +42,6 @@ export class Evaluator {
 
   public partialRun(vertices: Vertex[]): ContentChanges {
     const changes = ContentChanges.empty()
-    const cycled: Vertex[] = []
 
     this.stats.measure(StatType.EVALUATION, () => {
       this.dependencyGraph.graph.getTopSortedWithSccSubgraphFrom(vertices,
@@ -64,20 +63,19 @@ export class Evaluator {
             return true
           }
         },
-        (vertex: Vertex) => {
-          if (vertex instanceof RangeVertex) {
-            vertex.clearCache()
-          } else if (vertex instanceof FormulaVertex) {
-            const firstCycleChanges = this.iterateCircularDependencies([vertex], 1, false, true)
-            changes.addAll(firstCycleChanges)
-            cycled.push(vertex)
-          }
+        // Solving each cycle as soon as the traversal reaches it means it iterates against the final
+        // values of everything upstream (including non-cyclic cells chaining it to earlier cycles),
+        // and everything downstream is then computed from its converged values.
+        (cycle: Vertex[]) => {
+          cycle.forEach((vertex) => {
+            if (vertex instanceof RangeVertex) {
+              vertex.clearCache()
+            }
+          })
+          changes.addAll(this.iterateCircularDependencies(cycle))
         },
       )
     })
-
-    const cycledChanges = this.iterateCircularDependencies(cycled, this.config.maxIterations - 1)
-    changes.addAll(cycledChanges)
 
     return changes
   }
@@ -140,12 +138,8 @@ export class Evaluator {
 
   /**
    * Iterates over all circular dependencies (cycled vertices) with early convergence detection.
-   * Handles cascading dependencies by processing cycles in dependency order.
-   *
-   * @param skipDependentUpdate - When true, skips updateNonCyclicDependents. Used during Phase 1
-   *   of partialRun where the graph traversal handles non-cyclic dependents via the visit callback.
    */
-  private iterateCircularDependencies(cycled: Vertex[], cycles = this.config.maxIterations, isInitial = false, skipDependentUpdate = false): ContentChanges {
+  private iterateCircularDependencies(cycled: Vertex[], cycles = this.config.maxIterations, isInitial = false): ContentChanges {
     if (!this.config.allowCircularReferences) {
       return this.blockCircularDependencies(cycled)
     }
@@ -219,11 +213,6 @@ export class Evaluator {
       changes.addChange(cellValue, address)
     }
 
-    if (!skipDependentUpdate) {
-      const dependentChanges = this.updateNonCyclicDependents(cycled)
-      changes.addAll(dependentChanges)
-    }
-
     return changes
   }
 
@@ -235,57 +224,6 @@ export class Evaluator {
       return oldValue.type === newValue.type
     }
     return oldValue === newValue
-  }
-
-  /**
-   * Updates all non-cyclic cells that depend on the given cycled vertices.
-   * Uses topological sorting to ensure correct dependency order.
-   */
-  private updateNonCyclicDependents(cycled: Vertex[]): ContentChanges {
-    const changes = ContentChanges.empty()
-    const cyclicSet = new Set(cycled)
-
-    const dependents: Vertex[] = []
-    for (const vertex of cycled) {
-      for (const dependent of this.dependencyGraph.graph.adjacentNodes(vertex)) {
-        if (!cyclicSet.has(dependent)) {
-          dependents.push(dependent)
-        }
-      }
-    }
-
-    if (dependents.length === 0) {
-      return changes
-    }
-
-    this.dependencyGraph.graph.getTopSortedWithSccSubgraphFrom(
-      dependents,
-      (vertex: Vertex) => {
-        if (vertex instanceof FormulaVertex) {
-          const currentValue = vertex.isComputed() ? vertex.getCellValue() : undefined
-          const newCellValue = this.recomputeFormulaVertexValue(vertex)
-          if (newCellValue !== currentValue) {
-            const address = vertex.getAddress(this.lazilyTransformingAstService)
-            changes.addChange(newCellValue, address)
-            this.columnSearch.change(getRawValue(currentValue), getRawValue(newCellValue), address)
-            return true
-          }
-          return false
-        } else if (vertex instanceof RangeVertex) {
-          vertex.clearCache()
-          return true
-        } else {
-          return true
-        }
-      },
-      (vertex: Vertex) => {
-        if (vertex instanceof RangeVertex) {
-          vertex.clearCache()
-        }
-      }
-    )
-
-    return changes
   }
 
   /**

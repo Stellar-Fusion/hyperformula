@@ -508,4 +508,85 @@ describe('Circular Dependencies', () => {
       expect(engineLow.getCellValue(adr('B1'))).toBeCloseTo(engineHigh.getCellValue(adr('B1')) as number, 8)
     })
   })
+
+  // Analyst cash roll-forwards with interest on cash (or a debt sweep) have one cycle per period,
+  // chained through a non-cyclic "opening balance = previous closing balance" cell. After an edit,
+  // every downstream cycle must be re-solved against its final opening balance; otherwise the
+  // closing balance no longer equals opening + flow + interest and the model stops tying to Excel.
+  describe('chained cycles linked through non-cyclic cells', () => {
+    const INTEREST_RATE = 0.05
+    const OPENING_BALANCE = 1000
+    const SWEEP_SHARE = 0.5
+    const SWEEP_THRESHOLD = 1300
+
+    // Rows: 1 flow, 2 opening, 3 interest, 4 debt sweep, 5 closing. One column per period.
+    const buildRollForward = (flows: number[], withSweep: boolean) => {
+      const cols = flows.map((_, i) => String.fromCharCode(65 + i))
+      return [
+        flows,
+        cols.map((col, i) => (i === 0 ? OPENING_BALANCE : `=${cols[i - 1]}5`)),
+        cols.map((col) => `=${INTEREST_RATE}*${col}5`),
+        cols.map((col) => (withSweep ? `=IF(${col}2>${SWEEP_THRESHOLD},${SWEEP_SHARE}*(${col}1+${col}3),0)` : 0)),
+        cols.map((col) => `=${col}2+${col}1+${col}3-${col}4`),
+      ]
+    }
+
+    // Closed-form fixed point of each period's cycle, used both as the converged seed and as the oracle.
+    const solveRollForward = (flows: number[], withSweep: boolean) => {
+      const rows: number[][] = [flows, [], [], [], []]
+      let opening = OPENING_BALANCE
+      flows.forEach((flow) => {
+        const share = withSweep && opening > SWEEP_THRESHOLD ? SWEEP_SHARE : 0
+        const closing = (opening + flow * (1 - share)) / (1 - INTEREST_RATE * (1 - share))
+        const interest = INTEREST_RATE * closing
+        rows[1].push(opening)
+        rows[2].push(interest)
+        rows[3].push(share * (flow + interest))
+        rows[4].push(closing)
+        opening = closing
+      })
+      return rows
+    }
+
+    const buildConvergedEngine = (flows: number[], withSweep: boolean) => HyperFormula.buildFromArray(
+      buildRollForward(flows, withSweep),
+      {
+        allowCircularReferences: true,
+        initialComputedValues: {'Sheet1': solveRollForward(flows, withSweep)},
+      },
+    )
+
+    const expectRollForwardToMatch = (engine: HyperFormula, expected: number[][]) => {
+      expected[4].forEach((closing, col) => {
+        const value = (row: number) => engine.getCellValue({sheet: 0, row, col}) as number
+        expect(value(1)).toBeCloseTo(expected[1][col], 6)
+        expect(value(4)).toBeCloseTo(closing, 6)
+        expect(value(4)).toBeCloseTo(value(1) + value(0) + value(2) - value(3), 6)
+      })
+    }
+
+    it('re-solves every downstream cycle after an edit upstream of the chain', () => {
+      const engine = buildConvergedEngine([100, 50, 50, 50, 50, 50], false)
+
+      engine.setCellContents(adr('A1'), [[200]])
+
+      expectRollForwardToMatch(engine, solveRollForward([200, 50, 50, 50, 50, 50], false))
+    })
+
+    it('re-solves downstream cycles when the edit flips a branch inside a later cycle', () => {
+      const engine = buildConvergedEngine([100, 50, 50, 50], true)
+
+      engine.setCellContents(adr('A1'), [[200]])
+
+      expectRollForwardToMatch(engine, solveRollForward([200, 50, 50, 50], true))
+    })
+
+    it('leaves upstream periods untouched when the edit is in the middle of the chain', () => {
+      const engine = buildConvergedEngine([100, 50, 50, 50, 50], false)
+
+      engine.setCellContents(adr('C1'), [[150]])
+
+      expectRollForwardToMatch(engine, solveRollForward([100, 50, 150, 50, 50], false))
+    })
+  })
 })
