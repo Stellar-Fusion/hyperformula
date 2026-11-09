@@ -158,6 +158,7 @@ const dictionary: RawTranslationPackage = {
     MMULT: 'MATRIZ.MULT',
     MOD: 'MOD',
     MONTH: 'MÊS',
+    N: 'N',
     NA: 'NÃO.DISP',
     NETWORKDAYS: 'DIATRABALHOTOTAL',
     'NETWORKDAYS.INTL': 'DIATRABALHOTOTAL.INTL',
