@@ -158,6 +158,7 @@ const dictionary: RawTranslationPackage = {
     MMULT: 'MACIERZ.ILOCZYN',
     MOD: 'MOD',
     MONTH: 'MIESIĄC',
+    N: 'N',
     NA: 'BRAK',
     NETWORKDAYS: 'DNI.ROBOCZE',
     'NETWORKDAYS.INTL': 'DNI.ROBOCZE.NIESTAND',

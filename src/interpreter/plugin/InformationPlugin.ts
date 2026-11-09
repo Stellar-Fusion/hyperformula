@@ -8,7 +8,7 @@ import {FormulaVertex} from '../../DependencyGraph/FormulaCellVertex'
 import {ErrorMessage} from '../../error-message'
 import {AstNodeType, ProcedureAst} from '../../parser'
 import {InterpreterState} from '../InterpreterState'
-import {EmptyValue, InternalScalarValue, InterpreterValue, isExtendedNumber} from '../InterpreterValue'
+import {EmptyValue, getRawValue, InternalScalarValue, InterpreterValue, isExtendedNumber} from '../InterpreterValue'
 import {SimpleRangeValue} from '../../SimpleRangeValue'
 import {FunctionArgumentType, FunctionPlugin, FunctionPluginTypecheck, ImplementedFunctions} from './FunctionPlugin'
 
@@ -110,6 +110,12 @@ export class InformationPlugin extends FunctionPlugin implements FunctionPluginT
         {argumentType: FunctionArgumentType.RANGE},
         {argumentType: FunctionArgumentType.NUMBER},
         {argumentType: FunctionArgumentType.NUMBER, defaultValue: 1},
+      ]
+    },
+    'N': {
+      method: 'n',
+      parameters: [
+        {argumentType: FunctionArgumentType.SCALAR}
       ]
     },
     'NA': {
@@ -448,6 +454,30 @@ export class InformationPlugin extends FunctionPlugin implements FunctionPluginT
         return new CellError(ErrorType.NUM, ErrorMessage.ValueLarge)
       }
       return rangeValue?.data?.[row - 1]?.[col - 1] ?? rangeValue?.data?.[0]?.[0] ?? new CellError(ErrorType.VALUE, ErrorMessage.CellRangeExpected)
+    })
+  }
+
+  /**
+   * Corresponds to N(value)
+   *
+   * Converts a value to a number: numbers (including dates) pass through as raw numbers, TRUE/FALSE become 1/0,
+   * anything else (text, empty) becomes 0. Errors propagate.
+   *
+   * @param ast
+   * @param state
+   */
+  public n(ast: ProcedureAst, state: InterpreterState): InterpreterValue {
+    return this.runFunction(ast.args, state, this.metadata('N'), (arg: InternalScalarValue) => {
+      if (arg instanceof CellError) {
+        return arg
+      }
+      if (isExtendedNumber(arg)) {
+        return getRawValue(arg)
+      }
+      if (typeof arg === 'boolean') {
+        return arg ? 1 : 0
+      }
+      return 0
     })
   }
 

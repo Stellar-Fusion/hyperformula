@@ -158,6 +158,7 @@ const dictionary: RawTranslationPackage = {
     MMULT: 'PRODUCTMAT',
     MOD: 'REST',
     MONTH: 'MAAND',
+    N: 'N',
     NA: 'NB',
     NETWORKDAYS: 'NETTO.WERKDAGEN',
     'NETWORKDAYS.INTL': 'NETWERKDAGEN.INTL',
