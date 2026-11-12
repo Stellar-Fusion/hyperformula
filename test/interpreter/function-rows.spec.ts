@@ -73,4 +73,16 @@ describe('Function ROWS', () => {
 
     expect(engine.getCellValue(adr('B1'))).toEqual(3)
   })
+
+  it('counts rows when one endpoint has a relative row and the other an absolute one', () => {
+    const engine = HyperFormula.buildFromArray([
+      [],
+      [],
+      [],
+      ['=ROWS($A2:A$9)', '=ROWS(A$2:$A9)'],
+    ])
+
+    expect(engine.getCellValue(adr('A4'))).toEqual(8)
+    expect(engine.getCellValue(adr('B4'))).toEqual(8)
+  })
 })
