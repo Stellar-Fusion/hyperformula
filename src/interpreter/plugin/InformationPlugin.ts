@@ -368,7 +368,7 @@ export class InformationPlugin extends FunctionPlugin implements FunctionPluginT
       argAst = argAst.expression
     }
     if (argAst.type === AstNodeType.CELL_RANGE || argAst.type === AstNodeType.COLUMN_RANGE) {
-      return argAst.end.col - argAst.start.col + 1
+      return argAst.end.toSimpleColumnAddress(state.formulaAddress).col - argAst.start.toSimpleColumnAddress(state.formulaAddress).col + 1
     } else if (argAst.type === AstNodeType.CELL_REFERENCE) {
       return 1
     } else if (argAst.type === AstNodeType.ROW_RANGE) {
@@ -420,7 +420,7 @@ export class InformationPlugin extends FunctionPlugin implements FunctionPluginT
       argAst = argAst.expression
     }
     if (argAst.type === AstNodeType.CELL_RANGE || argAst.type === AstNodeType.ROW_RANGE) {
-      return argAst.end.row - argAst.start.row + 1
+      return argAst.end.toSimpleRowAddress(state.formulaAddress).row - argAst.start.toSimpleRowAddress(state.formulaAddress).row + 1
     } else if (argAst.type === AstNodeType.CELL_REFERENCE) {
       return 1
     } else if (argAst.type === AstNodeType.COLUMN_RANGE) {

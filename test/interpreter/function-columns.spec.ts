@@ -1,4 +1,5 @@
 import {ErrorType, HyperFormula} from '../../src'
+import {AbsoluteCellRange} from '../../src/AbsoluteCellRange'
 import {ErrorMessage} from '../../src/error-message'
 import {adr, detailedError} from '../testUtils'
 
@@ -76,5 +77,32 @@ describe('Function COLUMNS', () => {
     engine.addColumns(0, [1, 1])
 
     expect(engine.getCellValue(adr('A2'))).toEqual(3)
+  })
+
+  // Debt schedules amortise a balance over COLUMNS(M$6:$U$6) remaining periods; miscounting it
+  // drifts every balance, interest and total that depends on the schedule away from Excel.
+  it('counts columns when one endpoint has a relative column and the other an absolute one', () => {
+    const engine = HyperFormula.buildFromArray([
+      [],
+      [null, null, null, null, null, null, null, null, null, null, null, null,
+        '=COLUMNS(M$1:$U$1)', '=COLUMNS(N$1:$U$1)', '=COLUMNS($M$1:U1)'],
+    ])
+
+    expect(engine.getCellValue(adr('M2'))).toEqual(9)
+    expect(engine.getCellValue(adr('N2'))).toEqual(8)
+    expect(engine.getCellValue(adr('O2'))).toEqual(9)
+  })
+
+  it('counts mixed-anchor columns relative to the cell the formula is copied to', () => {
+    const engine = HyperFormula.buildFromArray([
+      [],
+      [null, '=COLUMNS(B$1:$E$1)'],
+    ])
+
+    engine.copy(AbsoluteCellRange.spanFrom(adr('B2'), 1, 1))
+    engine.paste(adr('C2'))
+
+    expect(engine.getCellValue(adr('B2'))).toEqual(4)
+    expect(engine.getCellValue(adr('C2'))).toEqual(3)
   })
 })
